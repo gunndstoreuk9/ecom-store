@@ -1,0 +1,5 @@
+sku,name_ar,name_en,type,price_mad,active,description_ar,image_path,notes
+american-sugar-balance-complex,المركّب الأمريكي لضبط السكر — الأصلي,American Sugar Balance Complex,hero,199,true,20 مكوّن نشط لدعم توازن السكر والطاقة,/images/placeholders/product-bottle-front.png,Hero product offers override single price with tiers 199/299/349
+cravings-support,علكات دعم الرغبة في الحلويات,Cravings Support Gummies,timed_upsell,99,true,عرض خاص يظهر بعد الطلب فقط,/images/placeholders/collection-card-placeholder.png,Only discounted inside timed upsell
+magnesium-sleep,مغنيسيوم + أشواغندا للنوم والاسترخاء,Magnesium Ashwagandha Sleep Support,cross_sell,199,false,منتج مقترح للسلة مستقبلاً,/images/placeholders/collection-card-placeholder.png,Enable only if supply/assets exist
+omega-heart,أوميغا 3 لدعم صحة القلب,Omega 3 Heart Support,cross_sell,199,false,منتج مقترح للسلة مستقبلاً,/images/placeholders/collection-card-placeholder.png,Enable only if supply/assets exist

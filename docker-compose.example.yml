@@ -1,0 +1,43 @@
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: tawazonhealth
+      POSTGRES_USER: tawazonhealth
+      POSTGRES_PASSWORD: tawazonhealth
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  backend:
+    build:
+      context: ./backend
+    environment:
+      APP_ENV: development
+      API_BASE_URL: http://localhost:8000
+      FRONTEND_URL: http://localhost:3000
+      CORS_ORIGINS: http://localhost:3000
+      DATABASE_URL: postgresql+psycopg://tawazonhealth:tawazonhealth@postgres:5432/tawazonhealth
+      SHEETS_WEBHOOK_URL: ""
+      SHEETS_WEBHOOK_SECRET: change-me
+      LOG_LEVEL: INFO
+    ports:
+      - "8000:8000"
+    depends_on:
+      - postgres
+
+  frontend:
+    build:
+      context: ./frontend
+    environment:
+      NEXT_PUBLIC_SITE_URL: http://localhost:3000
+      NEXT_PUBLIC_API_BASE_URL: http://localhost:8000
+      NEXT_PUBLIC_WHATSAPP_NUMBER: "212600000000"
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
