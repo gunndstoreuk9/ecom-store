@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { getOrder, type Order } from "@/lib/api";
@@ -8,6 +8,14 @@ import { formatMad } from "@/lib/currency";
 import { BRAND } from "@/config/brand";
 
 export default function ThankYouPage() {
+  return (
+    <Suspense fallback={<ThankYouFallback />}>
+      <ThankYouContent />
+    </Suspense>
+  );
+}
+
+function ThankYouContent() {
   const searchParams = useSearchParams();
   const orderId = searchParams.get("order_id");
   const [order, setOrder] = useState<Order | null>(null);
@@ -80,6 +88,19 @@ export default function ThankYouPage() {
           <Link href="/" className="text-sm text-[#1E4A8C] hover:underline">
             العودة للرئيسية
           </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ThankYouFallback() {
+  return (
+    <div className="section-padding">
+      <div className="container-main max-w-xl">
+        <div className="card-base p-8 text-center">
+          <div className="mx-auto mb-5 h-14 w-14 animate-pulse rounded-full bg-[#EEF5FF]" />
+          <p className="font-bold text-[#102033]">كنحضرو ملخص الطلب...</p>
         </div>
       </div>
     </div>
