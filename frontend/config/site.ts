@@ -1,8 +1,11 @@
+const defaultApiBase =
+  process.env.NODE_ENV === "production" ? "https://api.tawazonhealth.store" : "http://localhost:8000";
+
 export const SITE = {
   name: "تَوازُن للصحة",
   nameEn: "Tawazon Health",
   url: process.env.NEXT_PUBLIC_SITE_URL ?? "https://tawazonhealth.store",
-  apiBase: process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000",
+  apiBase: process.env.NEXT_PUBLIC_API_BASE_URL ?? defaultApiBase,
   whatsapp: process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? "212600000000",
   supportEmail: process.env.NEXT_PUBLIC_SUPPORT_EMAIL ?? "contact@tawazonhealth.store",
   metaPixelId: process.env.NEXT_PUBLIC_META_PIXEL_ID ?? "",
