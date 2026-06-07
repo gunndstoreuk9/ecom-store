@@ -1,0 +1,54 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --brand-blue: #1E4A8C;
+  --brand-blue-700: #173B70;
+  --brand-blue-50: #EEF5FF;
+  --brand-red: #DC2626;
+  --brand-gold: #D4A017;
+  --brand-green: #16A34A;
+  --ink: #102033;
+  --muted: #667085;
+  --paper: #FFFFFF;
+  --sand: #F8F5EF;
+  --border: #E5E7EB;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: "IBM Plex Sans Arabic", "Tajawal", "Cairo", system-ui, sans-serif;
+  background-color: var(--paper);
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  line-height: 1.7;
+}
+
+@layer utilities {
+  .container-main {
+    @apply max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8;
+  }
+  .section-padding {
+    @apply py-12 md:py-16 lg:py-20;
+  }
+  .card-base {
+    @apply bg-white rounded-[20px] border border-[#E5E7EB] shadow-sm;
+  }
+  .btn-red {
+    @apply bg-[#DC2626] hover:bg-red-700 text-white font-bold rounded-full min-h-[52px] px-7 py-3 transition-colors text-lg flex items-center justify-center gap-2;
+  }
+  .btn-outline {
+    @apply border-2 border-[#1E4A8C] text-[#1E4A8C] hover:bg-[#EEF5FF] font-semibold rounded-full min-h-[48px] px-6 py-3 transition-colors flex items-center justify-center gap-2;
+  }
+}
