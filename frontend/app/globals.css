@@ -35,6 +35,19 @@ body {
   line-height: 1.7;
 }
 
+.trust-ticker {
+  animation: trust-ticker-scroll 18s linear infinite;
+}
+
+@keyframes trust-ticker-scroll {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(50%);
+  }
+}
+
 @layer utilities {
   .container-main {
     @apply max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8;
