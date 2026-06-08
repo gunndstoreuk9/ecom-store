@@ -198,7 +198,7 @@ function DirectCodOrderForm({ embedded = false }: { embedded?: boolean } = {}) {
           <div className={embedded ? "relative z-10" : "relative z-10 rounded-[28px] border-2 border-orange-400 bg-white p-4 shadow-xl md:p-6"}>
             <div className="mb-4 flex items-center justify-between gap-3">
               <div>
-                <p className="text-sm font-extrabold text-[#102033]">اختر الكورس المناسب:</p>
+                <p className="text-sm font-extrabold text-[#102033]">اختر العرض المناسب:</p>
                 <p className="text-xs text-[#667085]">اختيارك الحالي ظاهر باللون الأزرق</p>
               </div>
               <div className="rounded-full bg-[#16A34A] px-3 py-1 text-xs font-bold text-white">
@@ -434,7 +434,7 @@ export default function ProductPage() {
         <div className="container-main">
           <SectionHeader
             kicker="الإثبات العلمي"
-            title="ليش تَوازُن يعطي تجربة مقنعة؟"
+            title="علاش المكمل الأمريكي لضبط السكر يعطي تجربة مقنعة؟"
             subtitle="الفكرة بسيطة: دعم يومي لثلاث مسارات مهمة: بعد الأكل، الطاقة، والرغبة في الحلويات."
           />
           <div className="grid gap-6 md:grid-cols-3">
