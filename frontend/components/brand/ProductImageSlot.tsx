@@ -1,3 +1,5 @@
+import Image from "next/image";
+
 type ProductImageSlotTone = "blue" | "sand" | "green" | "gold";
 
 interface ProductImageSlotProps {
@@ -6,6 +8,7 @@ interface ProductImageSlotProps {
   note?: string;
   tone?: ProductImageSlotTone;
   compact?: boolean;
+  showImage?: boolean;
   className?: string;
 }
 
@@ -15,6 +18,7 @@ export function ProductImageSlot({
   note,
   tone = "blue",
   compact = false,
+  showImage = false,
   className = "",
 }: ProductImageSlotProps) {
   const toneClass = {
@@ -23,6 +27,25 @@ export function ProductImageSlot({
     green: "from-[#ECFDF3] to-white text-[#102033]",
     gold: "from-[#FFF7E0] to-white text-[#102033]",
   }[tone];
+
+  if (showImage) {
+    return (
+      <div
+        className={`relative overflow-hidden rounded-[32px] bg-white shadow-2xl ${
+          compact ? "min-h-[220px]" : "min-h-[320px]"
+        } ${className}`}
+      >
+        <Image
+          src={`/images/product-page/${filename}`}
+          alt={label}
+          fill
+          sizes="(min-width: 1024px) 50vw, 100vw"
+          className="object-contain p-4"
+          priority={false}
+        />
+      </div>
+    );
+  }
 
   return (
     <div

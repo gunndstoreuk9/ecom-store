@@ -475,6 +475,7 @@ export default function ProductPage() {
               filename="ingredients-science.webp"
               note="قرفة، كروم، توت أبيض، كبسولات، وعبوة المنتج."
               tone="green"
+              showImage
             />
             <div>
               <h2 className="text-3xl font-extrabold text-[#102033] md:text-4xl">المكونات الفعّالة</h2>
