@@ -28,12 +28,6 @@ type OrderFormData = z.infer<typeof orderSchema>;
 
 const TRUST_BADGES = ["+3,120 طلب", "GMP", "Non-GMO", "الدفع عند الاستلام"];
 
-const HERO_BULLETS = [
-  "للناس اللي كيتقلقو من التحاليل وارتفاع السكر",
-  "يدعم طاقة ثابتة وتحكم أفضل في الرغبة بالحلويات",
-  "طلب بسيط: الاسم، الهاتف، المدينة — والدفع عند الاستلام",
-];
-
 const COD_BENEFITS = [
   "🚚 توصيل لجميع مدن المغرب",
 ];
@@ -349,68 +343,49 @@ function SectionHeader({ kicker, title, subtitle }: { kicker?: string; title: st
 export default function ProductPage() {
   return (
     <>
-      <section className="relative overflow-hidden bg-gradient-to-br from-[#EEF5FF] via-white to-[#F8F5EF] py-10 md:py-16">
+      <section className="relative overflow-hidden bg-gradient-to-br from-[#EEF5FF] via-white to-[#F8F5EF] py-5 md:py-16">
         <div className="absolute -right-24 top-10 h-72 w-72 rounded-full bg-[#1E4A8C]/10 blur-3xl" />
         <div className="absolute -bottom-32 left-10 h-80 w-80 rounded-full bg-[#DC2626]/10 blur-3xl" />
-        <div className="container-main">
-          <div className="relative z-10 grid gap-10 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
-            <div className="rounded-[34px] bg-white/65 p-5 shadow-sm backdrop-blur md:p-8">
-              <div className="mb-4 flex flex-wrap gap-2">
-                {TRUST_BADGES.map((badge) => (
-                  <span key={badge} className="rounded-full bg-[#1E4A8C] px-3 py-1 text-xs font-bold text-white shadow-sm">
-                    {badge}
-                  </span>
-                ))}
-              </div>
-
-              <p className="mb-3 text-sm font-extrabold text-[#DC2626]">
-                🇲🇦 للناس اللي بغاو يرجعو الإحساس بالتحكم قبل ما تزيد الأمور تقلق
-              </p>
-              <h1 className="text-4xl font-extrabold leading-tight text-[#102033] md:text-6xl">
-                السكر كيتقلقك؟ التعب بعد الأكل والحلوة ولات كتغلبك؟
-              </h1>
-              <p className="mt-4 text-lg font-semibold leading-relaxed text-[#344054]">
-                {HERO_PRODUCT.nameAr} هو مركّب أمريكي بـ20 مكوّن نشط صُمم لدعم توازن السكر في النطاق الصحي، طاقة يومية أكثر ثباتاً، وتحكم أفضل في الرغبة بالحلويات.
-              </p>
-
-              <div className="mt-5 grid gap-3">
-                {HERO_BULLETS.map((bullet) => (
-                  <div key={bullet} className="flex items-start gap-3 rounded-2xl bg-white px-4 py-3 shadow-sm">
-                    <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-[#16A34A]" />
-                    <span className="text-sm font-bold text-[#102033]">{bullet}</span>
-                  </div>
-                ))}
-              </div>
-
-              <div className="mt-5 rounded-2xl bg-white px-4 py-3 text-sm font-bold text-yellow-500 shadow-sm">
-                ★★★★★ <span className="font-medium text-[#667085]">4.9 (1,203 تقييم) • +3,120 طلب</span>
-              </div>
-
-              <div className="mt-5 rounded-2xl border border-orange-200 bg-orange-50 px-4 py-3 text-sm font-bold text-orange-800">
-                🔥 عرض 3 عبوات بـ349 درهم هو الأكثر طلباً هذا الأسبوع — الكمية محدودة
-              </div>
-
-              <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-                <button onClick={scrollToOrderForm} className="btn-red w-full sm:w-auto">
-                  نعم، أريد تأكيد طلبي الآن 🛒
-                </button>
-                <button onClick={scrollToOrderForm} className="btn-outline w-full sm:w-auto">
-                  شاهد العروض والأسعار
-                </button>
-              </div>
-
-              <p className="mt-3 text-center text-xs font-bold text-[#667085] sm:text-right">
-                لا تحتاج بطاقة بنكية · أدخل معلوماتك فقط وسنتصل بك للتأكيد
-              </p>
-            </div>
+        <div className="container-main max-w-3xl">
+          <div className="relative z-10 space-y-4">
             <ProductImageSlot
               label="صورة الهيرو: المنتج + عرض 3 عبوات"
               filename="hero-bundle.webp"
               note="صورة المنتج الرئيسية مع شارات الثقة والدفع عند الاستلام."
+              className="shadow-xl"
             />
-          </div>
 
-          <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="text-center">
+              <h1 className="text-3xl font-extrabold leading-tight text-[#102033] md:text-5xl">
+                السكر كيتقلقك؟ التعب بعد الأكل والحلوة ولات كتغلبك؟
+              </h1>
+              <p className="mt-3 text-base font-semibold leading-relaxed text-[#344054] md:text-lg">
+                {HERO_PRODUCT.nameAr} مركّب أمريكي بـ20 مكوّن نشط لدعم توازن السكر، طاقة ثابتة، وتحكم أفضل في الرغبة بالحلويات.
+              </p>
+            </div>
+
+            <div className="rounded-2xl bg-white/85 p-4 text-center text-sm font-semibold leading-relaxed text-[#667085] shadow-sm">
+              للناس اللي كيتقلقو من التحاليل وارتفاع السكر، وباغين حل واضح يدخل فالروتين اليومي بلا تعقيد وبلا دفع مسبق.
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {TRUST_BADGES.map((badge) => (
+                <span key={badge} className="rounded-full bg-white px-3 py-2 text-center text-xs font-bold text-[#1E4A8C] shadow-sm">
+                  {badge}
+                </span>
+              ))}
+            </div>
+
+            <div className="flex items-center justify-between rounded-2xl bg-white px-4 py-3 text-sm font-bold shadow-sm">
+              <span className="text-[#667085]">(1,203 تقييم)</span>
+              <span className="text-[#102033]">4.9</span>
+              <span className="text-yellow-400">★★★★★</span>
+            </div>
+
+            <div className="rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-center text-sm font-bold text-red-700">
+              🔥 الطلب عالي — الكمية محدودة لهذا الشهر
+            </div>
+
             {COD_BENEFITS.map((benefit) => (
               <div key={benefit} className="rounded-2xl bg-white px-4 py-3 text-center text-sm font-bold text-[#102033] shadow-sm">
                 {benefit}
