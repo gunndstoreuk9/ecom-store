@@ -426,6 +426,9 @@ export default function ProductPage() {
               filename="problem-cravings.webp"
               note="تعب بعد الأكل، حلويات، وقلق التحاليل."
               tone="sand"
+              className="min-h-[320px] md:min-h-[420px]"
+              showImage
+              imageFit="cover"
             />
             <div className="grid gap-4">
               {PROBLEM_SOLUTIONS.map((item) => (
