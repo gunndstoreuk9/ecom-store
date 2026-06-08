@@ -14,7 +14,7 @@ export function Logo() {
         />
       </div>
       <div className="leading-tight">
-        <div className="font-bold text-[#102033] text-base leading-none">تَوازُن للصحة</div>
+        <div className="font-bold text-[#205081] text-base leading-none">تَوازُن للصحة</div>
       </div>
     </div>
   );
