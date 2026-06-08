@@ -36,9 +36,6 @@ const HERO_BULLETS = [
 
 const COD_BENEFITS = [
   "🚚 توصيل لجميع مدن المغرب",
-  "💰 الدفع عند الاستلام",
-  "🔄 ضمان 30 يوم",
-  "📦 تأكيد الطلب عبر الهاتف",
 ];
 
 const PROBLEM_SOLUTIONS = [
