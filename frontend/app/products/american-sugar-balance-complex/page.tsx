@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
@@ -355,13 +356,20 @@ export default function ProductPage() {
         <div className="container-main max-w-6xl">
           <div className="relative z-10 grid gap-5 lg:grid-cols-2 lg:items-start">
             <div className="space-y-3 lg:col-start-2 lg:row-start-1">
-              <ProductImageSlot
-                label="صورة الهيرو: المنتج + عرض 3 عبوات"
-                filename="hero-bundle.webp"
-                note="صورة المنتج الرئيسية مع شارات الثقة والدفع عند الاستلام."
-                className="min-h-[360px] shadow-xl md:min-h-[520px]"
-                showImage
-              />
+              <div className="relative overflow-hidden rounded-[34px] bg-gradient-to-br from-white via-[#F8FBFF] to-[#EEF5FF] p-2 shadow-2xl ring-1 ring-[#D7E4F5] sm:p-3">
+                <div className="absolute -right-16 -top-16 h-40 w-40 rounded-full bg-[#205081]/10 blur-3xl" />
+                <div className="absolute -bottom-20 left-8 h-48 w-48 rounded-full bg-[#DC2626]/10 blur-3xl" />
+                <div className="relative aspect-square overflow-hidden rounded-[28px] bg-white">
+                  <Image
+                    src="/images/product-page/hero-bundle.webp"
+                    alt="المكمل الأمريكي لضبط السكر"
+                    fill
+                    sizes="(min-width: 1024px) 560px, 100vw"
+                    className="object-cover"
+                    priority
+                  />
+                </div>
+              </div>
 
               <div className="grid grid-cols-3 gap-2">
                 {["متوافق مع SFDA", "مختبر معملياً", "حلال 100%"].map((badge) => (
