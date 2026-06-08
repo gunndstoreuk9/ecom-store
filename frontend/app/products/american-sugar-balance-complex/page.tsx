@@ -26,8 +26,6 @@ const orderSchema = z.object({
 
 type OrderFormData = z.infer<typeof orderSchema>;
 
-const TRUST_BADGES = ["+3,120 طلب", "GMP", "Non-GMO", "الدفع عند الاستلام"];
-
 const COD_BENEFITS = [
   "🚚 توصيل لجميع مدن المغرب",
 ];
@@ -383,14 +381,6 @@ export default function ProductPage() {
 
               <div className="rounded-2xl bg-white/85 p-4 text-center text-sm font-semibold leading-relaxed text-[#667085] shadow-sm">
                 للناس اللي كيتقلقو من التحاليل وارتفاع السكر، وباغين حل واضح يدخل فالروتين اليومي بلا تعقيد وبلا دفع مسبق.
-              </div>
-
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                {TRUST_BADGES.map((badge) => (
-                  <span key={badge} className="rounded-full bg-white px-3 py-2 text-center text-xs font-bold text-[#1E4A8C] shadow-sm">
-                    {badge}
-                  </span>
-                ))}
               </div>
 
               <div className="flex items-center justify-between rounded-2xl bg-white px-4 py-3 text-sm font-bold shadow-sm">
