@@ -359,7 +359,7 @@ export default function ProductPage() {
               <div className="relative overflow-hidden rounded-[34px] bg-gradient-to-br from-white via-[#F8FBFF] to-[#EEF5FF] p-2 shadow-2xl ring-1 ring-[#D7E4F5] sm:p-3">
                 <div className="absolute -right-16 -top-16 h-40 w-40 rounded-full bg-[#205081]/10 blur-3xl" />
                 <div className="absolute -bottom-20 left-8 h-48 w-48 rounded-full bg-[#DC2626]/10 blur-3xl" />
-                <div className="relative aspect-square overflow-hidden rounded-[28px] bg-white">
+                <div className="relative aspect-[3/2] overflow-hidden rounded-[28px] bg-white">
                   <Image
                     src="/images/product-page/hero-bundle.webp"
                     alt="المكمل الأمريكي لضبط السكر"
