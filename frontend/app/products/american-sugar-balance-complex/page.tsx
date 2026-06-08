@@ -359,9 +359,8 @@ export default function ProductPage() {
                 label="صورة الهيرو: المنتج + عرض 3 عبوات"
                 filename="hero-bundle.webp"
                 note="صورة المنتج الرئيسية مع شارات الثقة والدفع عند الاستلام."
-                className="shadow-xl"
+                className="min-h-[360px] shadow-xl md:min-h-[520px]"
                 showImage
-                imageFit="cover"
               />
 
               <div className="grid grid-cols-3 gap-2">
