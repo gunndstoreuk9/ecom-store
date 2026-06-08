@@ -540,6 +540,9 @@ export default function ProductPage() {
               filename="cod-proof-offer.webp"
               note="علبة توصيل، واتساب، نجوم ثقة، وCOD."
               tone="gold"
+              className="min-h-[320px] md:min-h-[420px]"
+              showImage
+              imageFit="cover"
             />
           </div>
         </div>
