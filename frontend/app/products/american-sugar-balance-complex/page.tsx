@@ -486,11 +486,11 @@ export default function ProductPage() {
 
       <section className="section-padding bg-white">
         <div className="container-main">
-          <SectionHeader title="ليش تَوازُن يختلف؟" subtitle="مقارنة واضحة بين براند متخصص ومنتجات عامة." />
+          <SectionHeader title="علاش المكمل الأمريكي لضبط السكر يختلف؟" subtitle="مقارنة واضحة بين براند متخصص ومنتجات عامة." />
           <div className="overflow-hidden rounded-3xl border border-gray-200 shadow-sm">
             <div className="grid grid-cols-3 bg-[#1E4A8C] text-sm font-bold text-white">
               <div className="p-4">المعيار</div>
-              <div className="p-4 text-center">تَوازُن ⭐</div>
+              <div className="p-4 text-center">المكمل الأمريكي لضبط السكر</div>
               <div className="p-4 text-center">الآخرين</div>
             </div>
             {COMPARISON.map((row, index) => (
