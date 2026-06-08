@@ -121,7 +121,7 @@ function scrollToOrderForm() {
   document.getElementById("cod-order")?.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
-function DirectCodOrderForm() {
+function DirectCodOrderForm({ embedded = false }: { embedded?: boolean } = {}) {
   const router = useRouter();
   const [selectedOfferId, setSelectedOfferId] = useState<OfferId>("three");
   const [submitting, setSubmitting] = useState(false);
@@ -166,33 +166,41 @@ function DirectCodOrderForm() {
   };
 
   return (
-    <section id="cod-order" className="bg-white py-10 md:py-16">
-      <div className="container-main max-w-3xl">
-        <div className="relative overflow-hidden rounded-[34px] border border-[#FEE2E2] bg-gradient-to-br from-white via-[#FFF7ED] to-[#EEF5FF] p-5 shadow-2xl md:p-8">
-          <div className="absolute -left-20 -top-20 h-48 w-48 rounded-full bg-[#DC2626]/10 blur-3xl" />
-          <div className="absolute -bottom-24 right-10 h-56 w-56 rounded-full bg-[#1E4A8C]/10 blur-3xl" />
+    <section id="cod-order" className={embedded ? "" : "bg-white py-10 md:py-16"}>
+      <div className={embedded ? "" : "container-main max-w-3xl"}>
+        <div
+          className={
+            embedded
+              ? "relative"
+              : "relative overflow-hidden rounded-[34px] border border-[#FEE2E2] bg-gradient-to-br from-white via-[#FFF7ED] to-[#EEF5FF] p-5 shadow-2xl md:p-8"
+          }
+        >
+          {!embedded && <div className="absolute -left-20 -top-20 h-48 w-48 rounded-full bg-[#DC2626]/10 blur-3xl" />}
+          {!embedded && <div className="absolute -bottom-24 right-10 h-56 w-56 rounded-full bg-[#1E4A8C]/10 blur-3xl" />}
 
-          <div className="relative z-10 mb-7 text-center">
-            <div className="mx-auto mb-4 inline-flex items-center gap-2 rounded-full bg-[#DC2626] px-4 py-2 text-sm font-extrabold text-white shadow-lg">
-              🇲🇦 عرض الدفع عند الاستلام
+          {!embedded && (
+            <div className="relative z-10 mb-7 text-center">
+              <div className="mx-auto mb-4 inline-flex items-center gap-2 rounded-full bg-[#DC2626] px-4 py-2 text-sm font-extrabold text-white shadow-lg">
+                🇲🇦 عرض الدفع عند الاستلام
+              </div>
+              <h2 className="text-3xl font-extrabold leading-tight text-[#102033] md:text-4xl">
+                اختر العرض المناسب لك ودخل معلوماتك
+              </h2>
+              <p className="mx-auto mt-3 max-w-xl text-sm leading-relaxed text-[#667085] md:text-base">
+                لا تحتاج بطاقة بنكية. سنقوم بتسجيل طلبك ثم يتصل بك فريق تَوازُن لتأكيد التفاصيل قبل الإرسال.
+              </p>
+              <div className="mt-5 grid gap-2 text-xs font-bold text-[#102033] sm:grid-cols-3">
+                <span className="rounded-full bg-white px-3 py-2 shadow-sm">1. اختر العرض</span>
+                <span className="rounded-full bg-white px-3 py-2 shadow-sm">2. دخل معلوماتك</span>
+                <span className="rounded-full bg-white px-3 py-2 shadow-sm">3. خلص عند الاستلام</span>
+              </div>
             </div>
-            <h2 className="text-3xl font-extrabold leading-tight text-[#102033] md:text-4xl">
-              اختر العرض المناسب لك ودخل معلوماتك
-            </h2>
-            <p className="mx-auto mt-3 max-w-xl text-sm leading-relaxed text-[#667085] md:text-base">
-              لا تحتاج بطاقة بنكية. سنقوم بتسجيل طلبك ثم يتصل بك فريق تَوازُن لتأكيد التفاصيل قبل الإرسال.
-            </p>
-            <div className="mt-5 grid gap-2 text-xs font-bold text-[#102033] sm:grid-cols-3">
-              <span className="rounded-full bg-white px-3 py-2 shadow-sm">1. اختر العرض</span>
-              <span className="rounded-full bg-white px-3 py-2 shadow-sm">2. دخل معلوماتك</span>
-              <span className="rounded-full bg-white px-3 py-2 shadow-sm">3. خلص عند الاستلام</span>
-            </div>
-          </div>
+          )}
 
-          <div className="relative z-10 rounded-[28px] border-2 border-orange-400 bg-white p-4 shadow-xl md:p-6">
+          <div className={embedded ? "relative z-10" : "relative z-10 rounded-[28px] border-2 border-orange-400 bg-white p-4 shadow-xl md:p-6"}>
             <div className="mb-4 flex items-center justify-between gap-3">
               <div>
-                <p className="text-sm font-bold text-[#DC2626]">العروض الرسمية اليوم</p>
+                <p className="text-sm font-extrabold text-[#102033]">اختر الكورس المناسب:</p>
                 <p className="text-xs text-[#667085]">اختيارك الحالي ظاهر باللون الأزرق</p>
               </div>
               <div className="rounded-full bg-[#16A34A] px-3 py-1 text-xs font-bold text-white">
@@ -343,59 +351,69 @@ function SectionHeader({ kicker, title, subtitle }: { kicker?: string; title: st
 export default function ProductPage() {
   return (
     <>
-      <section className="relative overflow-hidden bg-gradient-to-br from-[#EEF5FF] via-white to-[#F8F5EF] py-5 md:py-16">
+      <section dir="rtl" className="relative overflow-hidden bg-gradient-to-br from-[#EEF5FF] via-white to-[#F8F5EF] py-5 md:py-12">
         <div className="absolute -right-24 top-10 h-72 w-72 rounded-full bg-[#1E4A8C]/10 blur-3xl" />
         <div className="absolute -bottom-32 left-10 h-80 w-80 rounded-full bg-[#DC2626]/10 blur-3xl" />
-        <div className="container-main max-w-3xl">
-          <div className="relative z-10 space-y-4">
-            <ProductImageSlot
-              label="صورة الهيرو: المنتج + عرض 3 عبوات"
-              filename="hero-bundle.webp"
-              note="صورة المنتج الرئيسية مع شارات الثقة والدفع عند الاستلام."
-              className="shadow-xl"
-            />
+        <div className="container-main max-w-6xl">
+          <div className="relative z-10 grid gap-5 lg:grid-cols-2 lg:items-start">
+            <div className="space-y-3 lg:col-start-2 lg:row-start-1">
+              <ProductImageSlot
+                label="صورة الهيرو: المنتج + عرض 3 عبوات"
+                filename="hero-bundle.webp"
+                note="صورة المنتج الرئيسية مع شارات الثقة والدفع عند الاستلام."
+                className="shadow-xl"
+              />
 
-            <div className="text-center">
-              <h1 className="text-3xl font-extrabold leading-tight text-[#102033] md:text-5xl">
-                السكر كيتقلقك؟ التعب بعد الأكل والحلوة ولات كتغلبك؟
+              <div className="grid grid-cols-3 gap-2">
+                {["متوافق مع SFDA", "مختبر معملياً", "حلال 100%"].map((badge) => (
+                  <span key={badge} className="rounded-2xl bg-white px-3 py-3 text-center text-xs font-bold text-[#1E4A8C] shadow-sm">
+                    {badge}
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-4 text-right lg:col-start-1 lg:row-start-1">
+              <h1 className="text-3xl font-extrabold leading-[1.15] tracking-tight text-[#102033] md:text-5xl">
+                السر الأمريكي وصل للمغرب: المكمل رقم 1 لتنظيم السكر طبيعياً متوفر الآن! 🇲🇦🇺🇸
               </h1>
-              <p className="mt-3 text-base font-semibold leading-relaxed text-[#344054] md:text-lg">
+              <p className="text-base font-semibold leading-relaxed text-[#344054] md:text-lg">
                 {HERO_PRODUCT.nameAr} مركّب أمريكي بـ20 مكوّن نشط لدعم توازن السكر، طاقة ثابتة، وتحكم أفضل في الرغبة بالحلويات.
               </p>
-            </div>
 
-            <div className="rounded-2xl bg-white/85 p-4 text-center text-sm font-semibold leading-relaxed text-[#667085] shadow-sm">
-              للناس اللي كيتقلقو من التحاليل وارتفاع السكر، وباغين حل واضح يدخل فالروتين اليومي بلا تعقيد وبلا دفع مسبق.
-            </div>
-
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-              {TRUST_BADGES.map((badge) => (
-                <span key={badge} className="rounded-full bg-white px-3 py-2 text-center text-xs font-bold text-[#1E4A8C] shadow-sm">
-                  {badge}
-                </span>
-              ))}
-            </div>
-
-            <div className="flex items-center justify-between rounded-2xl bg-white px-4 py-3 text-sm font-bold shadow-sm">
-              <span className="text-[#667085]">(1,203 تقييم)</span>
-              <span className="text-[#102033]">4.9</span>
-              <span className="text-yellow-400">★★★★★</span>
-            </div>
-
-            <div className="rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-center text-sm font-bold text-red-700">
-              🔥 الطلب عالي — الكمية محدودة لهذا الشهر
-            </div>
-
-            {COD_BENEFITS.map((benefit) => (
-              <div key={benefit} className="rounded-2xl bg-white px-4 py-3 text-center text-sm font-bold text-[#102033] shadow-sm">
-                {benefit}
+              <div className="rounded-2xl bg-white/85 p-4 text-center text-sm font-semibold leading-relaxed text-[#667085] shadow-sm">
+                للناس اللي كيتقلقو من التحاليل وارتفاع السكر، وباغين حل واضح يدخل فالروتين اليومي بلا تعقيد وبلا دفع مسبق.
               </div>
-            ))}
+
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                {TRUST_BADGES.map((badge) => (
+                  <span key={badge} className="rounded-full bg-white px-3 py-2 text-center text-xs font-bold text-[#1E4A8C] shadow-sm">
+                    {badge}
+                  </span>
+                ))}
+              </div>
+
+              <div className="flex items-center justify-between rounded-2xl bg-white px-4 py-3 text-sm font-bold shadow-sm">
+                <span className="text-[#667085]">(1,203 تقييم)</span>
+                <span className="text-[#102033]">4.9</span>
+                <span className="text-yellow-400">★★★★★</span>
+              </div>
+
+              <div className="rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-center text-sm font-bold text-red-700">
+                🔥 الطلب عالي — الكمية محدودة لهذا الشهر
+              </div>
+
+              {COD_BENEFITS.map((benefit) => (
+                <div key={benefit} className="rounded-2xl bg-white px-4 py-3 text-center text-sm font-bold text-[#102033] shadow-sm">
+                  {benefit}
+                </div>
+              ))}
+
+              <DirectCodOrderForm embedded />
+            </div>
           </div>
         </div>
       </section>
-
-      <DirectCodOrderForm />
 
       <section className="section-padding bg-[#F8F5EF]">
         <div className="container-main">
