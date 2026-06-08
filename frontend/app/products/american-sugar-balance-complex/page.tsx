@@ -360,6 +360,8 @@ export default function ProductPage() {
                 filename="hero-bundle.webp"
                 note="صورة المنتج الرئيسية مع شارات الثقة والدفع عند الاستلام."
                 className="shadow-xl"
+                showImage
+                imageFit="cover"
               />
 
               <div className="grid grid-cols-3 gap-2">

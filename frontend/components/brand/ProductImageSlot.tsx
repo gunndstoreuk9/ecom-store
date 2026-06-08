@@ -9,6 +9,7 @@ interface ProductImageSlotProps {
   tone?: ProductImageSlotTone;
   compact?: boolean;
   showImage?: boolean;
+  imageFit?: "contain" | "cover";
   className?: string;
 }
 
@@ -19,6 +20,7 @@ export function ProductImageSlot({
   tone = "blue",
   compact = false,
   showImage = false,
+  imageFit = "contain",
   className = "",
 }: ProductImageSlotProps) {
   const toneClass = {
@@ -40,7 +42,7 @@ export function ProductImageSlot({
           alt={label}
           fill
           sizes="(min-width: 1024px) 50vw, 100vw"
-          className="object-contain p-4"
+          className={imageFit === "cover" ? "object-cover" : "object-contain p-4"}
           priority={false}
         />
       </div>
