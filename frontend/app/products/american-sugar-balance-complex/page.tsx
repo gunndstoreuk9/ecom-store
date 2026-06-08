@@ -556,18 +556,28 @@ export default function ProductPage() {
 
       <section className="section-padding bg-[#F8F5EF]">
         <div className="container-main">
-          <SectionHeader title="طريقة الاستخدام" />
-          <div className="grid gap-6 md:grid-cols-3">
+          <SectionHeader title="طريقة الاستعمال" subtitle="نتائج أفضل مع الاستخدام المنتظم" />
+          <div className="grid gap-4 md:grid-cols-4">
             {[
-              ["💊", "ابدأ اليوم", "استعمل المنتج يومياً حسب تعليمات العبوة."],
-              ["⚡", "لاحظ الروتين", "راقب الطاقة والرغبة في الحلويات مع الاستمرارية."],
-              ["✨", "استمر للأفضل", "أفضل تجربة كتكون مع الالتزام بعرض 3 عبوات."],
+              ["💊", "تناول كبسولتين", "يومياً"],
+              ["🍽️", "بعد الوجبات", "الرئيسية"],
+              ["🥤", "مع كوب", "من الماء"],
+              ["📅", "الاستمرار يومياً", "لنتائج أفضل"],
             ].map(([icon, title, text], index) => (
               <div key={title} className="card-base p-6 text-center">
                 <div className="text-4xl">{icon}</div>
-                <p className="mt-3 text-sm font-bold text-[#DC2626]">0{index + 1}</p>
-                <h3 className="mt-1 text-lg font-extrabold text-[#102033]">{title}</h3>
-                <p className="mt-2 text-sm text-[#667085]">{text}</p>
+                <p className="mt-3 inline-flex h-8 w-8 items-center justify-center rounded-xl bg-[#1E4A8C] text-sm font-extrabold text-white">
+                  {index + 1}
+                </p>
+                <h3 className="mt-3 text-lg font-extrabold leading-tight text-[#102033]">{title}</h3>
+                <p className="mt-1 text-base font-bold text-[#667085]">{text}</p>
+              </div>
+            ))}
+          </div>
+          <div className="mx-auto mt-8 grid max-w-2xl gap-3 sm:grid-cols-3">
+            {["طبيعي", "جودة عالية", "تركيبة متطورة"].map((benefit) => (
+              <div key={benefit} className="rounded-2xl bg-white px-4 py-3 text-center text-sm font-extrabold text-[#1E4A8C] shadow-sm">
+                ✓ {benefit}
               </div>
             ))}
           </div>
