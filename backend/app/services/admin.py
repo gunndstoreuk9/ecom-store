@@ -35,6 +35,8 @@ CANCELLED_STATUSES = {"cancelled", "no_answer"}
 
 
 CONTACTABLE_STATUSES = {"new", "no_answer", "awaiting_confirmation"}
+# Orders in these states are already handled and should not appear in contact queues.
+NON_CONTACT_STATUSES = {"cancelled", "refused", "delivered", "returned", "shipped", "packed", "confirmed"}
 
 
 def list_admin_orders(
@@ -331,7 +333,7 @@ def _apply_order_filters(
     date_to: Optional[date],
 ):
     if bucket == "new":
-        query = query.filter(Order.call_status.is_(None), Order.status == "new")
+        query = query.filter(Order.call_status.is_(None), Order.status.notin_(NON_CONTACT_STATUSES))
     elif bucket == "follow_up":
         query = query.filter(Order.call_status.in_(RETRY_CALL_STATUSES))
     elif bucket == "contactable":
