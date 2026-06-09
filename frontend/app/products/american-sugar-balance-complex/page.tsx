@@ -516,8 +516,8 @@ export default function ProductPage() {
             <div className="grid gap-0 lg:grid-cols-[0.9fr_1.1fr]">
               <div className="relative min-h-[360px] bg-[#EEF5FF] lg:min-h-full">
                 <Image
-                  src="/images/product-page/ingredients-science.webp"
-                  alt="مكونات المركب الأمريكي لضبط السكر"
+                  src="/images/product-page/scientific-proof-product-ingredients.png"
+                  alt="شرح علمي لطريقة دعم المركب الأمريكي لتوازن السكر في الدم"
                   fill
                   sizes="(min-width: 1024px) 45vw, 100vw"
                   className="object-cover"
