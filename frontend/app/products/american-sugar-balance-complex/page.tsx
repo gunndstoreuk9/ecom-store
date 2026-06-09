@@ -52,26 +52,36 @@ const PROBLEM_SOLUTIONS = [
 
 const PROOF_STAGES = [
   {
-    icon: "🔬",
-    title: "المرحلة الأولى",
-    text: "مكوّنات نباتية ومعدنية مختارة تدخل روتينك اليومي لدعم التوازن من الداخل.",
+    icon: "🍽️",
+    title: "بعد الوجبات",
+    text: "مكوّنات بحال القرفة والتوت الأبيض مختارة باش تدعم روتينك اليومي بعد الماكلة.",
+    point: "مهم للناس اللي كيحسو بثقل أو تعب بعد الوجبات.",
   },
   {
     icon: "⚡",
-    title: "المرحلة الثانية",
-    text: "تدعم مسارات الجسم الطبيعية لاستعمال السكر كطاقة وتقليل الهبوط بعد الوجبات.",
+    title: "الطاقة خلال النهار",
+    text: "الكروم والمعادن الداعمة كيساعدو الجسم فالأيض الطبيعي للمغذيات واستعمال الطاقة بشكل أفضل.",
+    point: "روتين بسيط للناس اللي كيبغيو نهارهم يكون منظم.",
   },
   {
-    icon: "✨",
-    title: "المرحلة الثالثة",
-    text: "مع الاستمرارية، يصبح التحكم في الروتين والرغبة في الحلويات أسهل يوم بعد يوم.",
+    icon: "🍬",
+    title: "الرغبة فالحلويات",
+    text: "تركيبة نباتية ومعدنية كتخليك مركز على الالتزام اليومي بدل ما تبقى كل مرة كتقاوم بوحدك.",
+    point: "كيعاونك تبني عادة يومية واضحة بلا تعقيد.",
   },
 ];
 
 const STATS = [
-  { value: "20", label: "مكوّن نشط" },
-  { value: "60", label: "كبسولة" },
-  { value: "+3K", label: "طلب مكتمل" },
+  { value: "20", label: "مكوّن نشط", sublabel: "تركيبة نباتية ومعدنية" },
+  { value: "60", label: "كبسولة", sublabel: "علبة كاملة للروتين اليومي" },
+  { value: "940mg", label: "لكل حصة", sublabel: "كما هو موضح على العبوة" },
+];
+
+const SCIENCE_PILLARS = [
+  "قرفة + كروم + توت أبيض",
+  "تركيبة واضحة ماشي منتج مجهول",
+  "روتين يومي مفهوم وسهل الالتزام",
+  "دفع عند الاستلام قبل أي مخاطرة",
 ];
 
 const COMPARISON = [
@@ -478,27 +488,92 @@ export default function ProductPage() {
 
       <section className="section-padding bg-white">
         <div className="container-main">
-          <SectionHeader
-            kicker="الإثبات العلمي"
-            title="علاش المكمل الأمريكي لضبط السكر يعطي تجربة مقنعة؟"
-            subtitle="الفكرة بسيطة: دعم يومي لثلاث مسارات مهمة: بعد الأكل، الطاقة، والرغبة في الحلويات."
-          />
-          <div className="grid gap-6 md:grid-cols-3">
-            {PROOF_STAGES.map((stage) => (
-              <div key={stage.title} className="card-base p-6 text-center">
-                <div className="mb-4 text-4xl">{stage.icon}</div>
-                <h3 className="font-extrabold text-[#102033]">{stage.title}</h3>
-                <p className="mt-3 text-sm leading-relaxed text-[#667085]">{stage.text}</p>
+          <div className="mb-10 grid gap-8 lg:grid-cols-[1.05fr_0.95fr] lg:items-end">
+            <div>
+              <p className="mb-2 text-sm font-black text-[#DC2626]">الإثبات العلمي</p>
+              <h2 className="max-w-3xl text-3xl font-black leading-tight text-[#102033] md:text-5xl">
+                ماشي غير كلام تسويقي: التركيبة مبنية على مكوّنات معروفة لدعم التوازن اليومي
+              </h2>
+              <p className="mt-4 max-w-2xl text-base font-semibold leading-8 text-[#667085]">
+                الفكرة بسيطة ومفهومة للعميل المغربي: دعم يومي لثلاث نقاط كتهم بزاف الناس بعد الأكل، الطاقة، والرغبة فالحلويات، مع استعمال سهل ودفع عند الاستلام.
+              </p>
+            </div>
+
+            <div className="rounded-[30px] border border-[#D7E4F5] bg-gradient-to-br from-[#EEF5FF] to-white p-5 shadow-sm">
+              <p className="text-sm font-black text-[#1E4A8C]">شنو كيميز هاد التركيبة؟</p>
+              <div className="mt-4 grid gap-3">
+                {SCIENCE_PILLARS.map((item) => (
+                  <div key={item} className="flex items-center gap-3 rounded-2xl bg-white px-4 py-3 text-sm font-black text-[#102033] shadow-sm">
+                    <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#16A34A] text-xs text-white">✓</span>
+                    {item}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="overflow-hidden rounded-[36px] border border-gray-100 bg-[#F8F5EF] shadow-2xl shadow-slate-900/5">
+            <div className="grid gap-0 lg:grid-cols-[0.9fr_1.1fr]">
+              <div className="relative min-h-[360px] bg-[#EEF5FF] lg:min-h-full">
+                <Image
+                  src="/images/product-page/ingredients-science.webp"
+                  alt="مكونات المركب الأمريكي لضبط السكر"
+                  fill
+                  sizes="(min-width: 1024px) 45vw, 100vw"
+                  className="object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#102033]/55 via-transparent to-transparent" />
+                <div className="absolute bottom-5 right-5 rounded-3xl bg-white/95 p-4 text-right shadow-xl">
+                  <p className="text-xs font-bold text-[#667085]">تركيبة واضحة</p>
+                  <p className="mt-1 text-lg font-black text-[#102033]">20 مكوّن نشط</p>
+                  <p className="text-xs font-bold text-[#1E4A8C]">قرفة · كروم · توت أبيض · معادن داعمة</p>
+                </div>
+              </div>
+
+              <div className="grid gap-4 p-5 md:p-8">
+                {PROOF_STAGES.map((stage, index) => (
+                  <div key={stage.title} className="rounded-[28px] bg-white p-5 shadow-sm">
+                    <div className="flex gap-4">
+                      <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-[#EEF5FF] text-3xl">
+                        {stage.icon}
+                      </div>
+                      <div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="rounded-full bg-[#1E4A8C] px-3 py-1 text-xs font-black text-white">
+                            مسار {index + 1}
+                          </span>
+                          <h3 className="text-xl font-black text-[#102033]">{stage.title}</h3>
+                        </div>
+                        <p className="mt-3 text-sm font-semibold leading-7 text-[#475467]">{stage.text}</p>
+                        <p className="mt-3 rounded-2xl bg-[#F0FDF4] px-4 py-3 text-sm font-black text-[#168A12]">
+                          {stage.point}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-8 grid gap-4 md:grid-cols-3">
+            {STATS.map((stat) => (
+              <div key={stat.label} className="rounded-[28px] border border-[#D7E4F5] bg-white p-6 text-center shadow-sm">
+                <p className="text-4xl font-black text-[#1E4A8C]">{stat.value}</p>
+                <p className="mt-2 text-sm font-black text-[#102033]">{stat.label}</p>
+                <p className="mt-1 text-xs font-semibold text-[#667085]">{stat.sublabel}</p>
               </div>
             ))}
           </div>
-          <div className="mt-8 grid gap-4 md:grid-cols-3">
-            {STATS.map((stat) => (
-              <div key={stat.label} className="rounded-3xl bg-[#EEF5FF] p-6 text-center">
-                <p className="text-4xl font-extrabold text-[#1E4A8C]">{stat.value}</p>
-                <p className="mt-1 text-sm font-bold text-[#102033]">{stat.label}</p>
-              </div>
-            ))}
+
+          <div className="mx-auto mt-8 max-w-4xl rounded-[28px] bg-[#102033] p-5 text-center text-white md:p-7">
+            <p className="text-xl font-black md:text-2xl">بغيتي تركيبة مفهومة وثمن واضح بلا دفع مسبق؟</p>
+            <p className="mt-2 text-sm font-semibold leading-7 text-blue-100">
+              اختار العرض المناسب، دخل معلوماتك، والفريق يتاصل بك للتأكيد قبل الإرسال.
+            </p>
+            <button onClick={scrollToOrderForm} className="mt-5 rounded-full bg-[#DC2626] px-8 py-4 text-sm font-black text-white transition hover:bg-red-700">
+              اطلب الآن — الدفع عند الاستلام
+            </button>
           </div>
         </div>
       </section>
