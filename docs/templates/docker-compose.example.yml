@@ -32,7 +32,7 @@ services:
     environment:
       NEXT_PUBLIC_SITE_URL: http://localhost:3000
       NEXT_PUBLIC_API_BASE_URL: http://localhost:8000
-      NEXT_PUBLIC_WHATSAPP_NUMBER: "212600000000"
+      NEXT_PUBLIC_WHATSAPP_NUMBER: "212771436235"
     ports:
       - "3000:3000"
     depends_on:

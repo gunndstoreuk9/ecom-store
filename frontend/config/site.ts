@@ -6,7 +6,7 @@ export const SITE = {
   nameEn: "Tawazon Health",
   url: process.env.NEXT_PUBLIC_SITE_URL ?? "https://tawazonhealth.store",
   apiBase: process.env.NEXT_PUBLIC_API_BASE_URL ?? defaultApiBase,
-  whatsapp: process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? "212600000000",
+  whatsapp: process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? "212771436235",
   supportEmail: process.env.NEXT_PUBLIC_SUPPORT_EMAIL ?? "contact@tawazonhealth.store",
   metaPixelId: process.env.NEXT_PUBLIC_META_PIXEL_ID ?? "",
   tiktokPixelId: process.env.NEXT_PUBLIC_TIKTOK_PIXEL_ID ?? "",

@@ -5,6 +5,6 @@ export const BRAND = {
   taglineFr: "L'équilibre, naturellement.",
   domain: "tawazonhealth.store",
   email: "contact@tawazonhealth.store",
-  whatsappNumber: process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? "212600000000",
+  whatsappNumber: process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? "212771436235",
   siteUrl: process.env.NEXT_PUBLIC_SITE_URL ?? "https://tawazonhealth.store",
 } as const;
