@@ -52,6 +52,7 @@ export default function CallCenterPage() {
   const [savedKey, setSavedKey] = useState("");
   const [orders, setOrders] = useState<AdminOrder[]>([]);
   const [stats, setStats] = useState<AdminCallCenterStats | null>(null);
+  const [counts, setCounts] = useState<{ new: number; follow_up: number; confirmed: number }>({ new: 0, follow_up: 0, confirmed: 0 });
   const [showStats, setShowStats] = useState(true);
   const [tab, setTab] = useState<TabValue>("new");
   const [query, setQuery] = useState("");
@@ -83,8 +84,23 @@ export default function CallCenterPage() {
   useEffect(() => {
     if (!savedKey) return;
     void loadStats(savedKey);
+    void refreshCounts(savedKey);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [savedKey]);
+
+  async function refreshCounts(key = currentKey) {
+    if (!key) return;
+    try {
+      const [n, f, c] = await Promise.all([
+        getAdminOrders(key, { limit: 1, bucket: "new" }),
+        getAdminOrders(key, { limit: 1, bucket: "follow_up" }),
+        getAdminOrders(key, { limit: 1, bucket: "confirmed" }),
+      ]);
+      setCounts({ new: n.total, follow_up: f.total, confirmed: c.total });
+    } catch {
+      // counts are non-blocking
+    }
+  }
 
   async function loadOrders(key = currentKey) {
     if (!key) return;
@@ -125,6 +141,7 @@ export default function CallCenterPage() {
 
   function onSaved(updated: AdminOrder) {
     void loadStats();
+    void refreshCounts();
     setOrders((current) => {
       // In contact queues a handled order leaves the list once it changes state.
       if ((tab === "new" || tab === "follow_up") && updated.status !== "new") {
@@ -153,6 +170,7 @@ export default function CallCenterPage() {
       setOrders((current) => current.filter((o) => !selected.has(o.id)));
       setSelected(new Set());
       void loadStats();
+      void refreshCounts();
     } catch (err) {
       setError(errorMessage(err, lang));
     } finally {
@@ -252,17 +270,25 @@ export default function CallCenterPage() {
 
       <div className="border-b border-gray-200 bg-white">
         <div className="mx-auto flex max-w-[1280px] flex-wrap items-center gap-2 px-4 py-3 sm:px-6">
-          {TABS.map((item) => (
-            <button
-              key={item.value}
-              onClick={() => setTab(item.value)}
-              className={`rounded-full px-4 py-1.5 text-xs font-black transition ${
-                tab === item.value ? "bg-[#1E4A8C] text-white" : "bg-[#F5F7FB] text-[#667085] hover:bg-[#EEF5FF]"
-              }`}
-            >
-              {t(item.fr, item.ar)}
-            </button>
-          ))}
+          {TABS.map((item) => {
+            const badge = item.value === "all" ? null : counts[item.value];
+            return (
+              <button
+                key={item.value}
+                onClick={() => setTab(item.value)}
+                className={`flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-black transition ${
+                  tab === item.value ? "bg-[#1E4A8C] text-white" : "bg-[#F5F7FB] text-[#667085] hover:bg-[#EEF5FF]"
+                }`}
+              >
+                {t(item.fr, item.ar)}
+                {badge ? (
+                  <span className={`rounded-full px-1.5 py-0.5 text-[10px] leading-none ${tab === item.value ? "bg-white/25 text-white" : "bg-[#1E4A8C]/10 text-[#1E4A8C]"}`}>
+                    {badge}
+                  </span>
+                ) : null}
+              </button>
+            );
+          })}
           <div className="ms-auto flex items-center gap-2">
             <input
               value={query}
