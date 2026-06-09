@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import json
 from datetime import date
-from typing import Optional
+from typing import Optional, Type, TypeVar
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from pydantic import BaseModel, ValidationError
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -30,6 +32,28 @@ from app.services.admin import (
 )
 
 router = APIRouter(prefix="/admin", tags=["admin"], dependencies=[Depends(require_admin_key)])
+
+ModelT = TypeVar("ModelT", bound=BaseModel)
+
+
+async def _parse_body(request: Request, model: Type[ModelT]) -> ModelT:
+    """Parse and validate the request body regardless of Content-Type.
+
+    The hosting proxy can drop/alter the JSON content-type on write requests,
+    so we read the raw body and decode it ourselves (same approach as orders).
+    """
+    try:
+        if "application/json" in request.headers.get("content-type", ""):
+            body = await request.json()
+        else:
+            raw_body = (await request.body()).decode("utf-8")
+            body = json.loads(raw_body) if raw_body else {}
+        return model.model_validate(body)
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid JSON body")
+    except ValidationError as exc:
+        errors = [{"loc": error.get("loc", ()), "msg": error.get("msg", "Invalid value")} for error in exc.errors()]
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=errors)
 
 
 @router.get("/analytics", response_model=AdminAnalyticsResponse)
@@ -68,11 +92,12 @@ def admin_orders(
 
 
 @router.patch("/orders/{order_id}/status", response_model=AdminOrderListItem)
-def admin_update_order_status(
+async def admin_update_order_status(
     order_id: str,
-    payload: AdminOrderStatusUpdate,
+    request: Request,
     db: Session = Depends(get_db),
 ) -> AdminOrderListItem:
+    payload = await _parse_body(request, AdminOrderStatusUpdate)
     order = update_admin_order_status(db, order_id, payload.status)
     if not order:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
@@ -80,11 +105,12 @@ def admin_update_order_status(
 
 
 @router.patch("/orders/{order_id}/call", response_model=AdminOrderListItem)
-def admin_update_order_call(
+async def admin_update_order_call(
     order_id: str,
-    payload: AdminOrderCallUpdate,
+    request: Request,
     db: Session = Depends(get_db),
 ) -> AdminOrderListItem:
+    payload = await _parse_body(request, AdminOrderCallUpdate)
     order = update_admin_order_call(
         db,
         order_id,
@@ -99,11 +125,12 @@ def admin_update_order_call(
 
 
 @router.patch("/orders/{order_id}/details", response_model=AdminOrderListItem)
-def admin_update_order_details(
+async def admin_update_order_details(
     order_id: str,
-    payload: AdminOrderEditUpdate,
+    request: Request,
     db: Session = Depends(get_db),
 ) -> AdminOrderListItem:
+    payload = await _parse_body(request, AdminOrderEditUpdate)
     order = update_admin_order_details(
         db,
         order_id,
@@ -125,10 +152,11 @@ def admin_call_center_stats(db: Session = Depends(get_db)) -> AdminCallCenterSta
 
 
 @router.post("/dispatch", response_model=AdminDispatchResponse)
-def admin_dispatch_orders(
-    payload: AdminDispatchRequest,
+async def admin_dispatch_orders(
+    request: Request,
     db: Session = Depends(get_db),
 ) -> AdminDispatchResponse:
+    payload = await _parse_body(request, AdminDispatchRequest)
     return dispatch_orders(
         db,
         order_ids=payload.order_ids,
