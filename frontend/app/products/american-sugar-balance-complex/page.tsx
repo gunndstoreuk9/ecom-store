@@ -134,10 +134,14 @@ const REVIEWS = [
 ];
 
 const FAQS = [
-  ["كم كبسولة في العلبة؟", "كل علبة فيها 60 كبسولة، وهي مصممة للاستعمال اليومي."],
-  ["العرض المناسب ليا شنو هو؟", "إذا بغيتي أفضل قيمة واستمرارية، اختار عرض 3 عبوات. إذا باغي تجربة أولى، عبوة واحدة كافية للبداية."],
-  ["كيفاش كنأكد الطلب؟", "دخل الاسم، الهاتف، والمدينة. الفريق كيتاصل بك لتأكيد التفاصيل قبل الإرسال."],
-  ["واش الدفع عند الاستلام؟", "نعم. كتخلص نقداً عند استلام الطلب فقط."],
+  ["واش خاصني نخلص قبل ما يوصلني الطلب؟", "لا. الطلب بالدفع عند الاستلام. كتدخل الاسم، الهاتف والمدينة، والفريق كيتاصل بك للتأكيد، وكتخلص غير ملي يوصلك المنتج."],
+  ["كيفاش كنعرف أن الطلب ديالي تسجل؟", "منين كتضغط على تأكيد الطلب، كيتسجل الطلب عندنا وكيبقى الفريق يتاصل بك باش يأكد العرض، المدينة، والثمن النهائي قبل الإرسال."],
+  ["شحال من كبسولة فالعلبة؟", "كل علبة فيها 60 كبسولة. الاستعمال اليومي بسيط ومصمم باش يدخل فالروتين بلا تعقيد."],
+  ["شنو العرض اللي كيناسبني؟", "إلى بغيتي أفضل قيمة واستمرارية، عرض 3 عبوات هو الأكثر طلباً. إلى بغيتي غير تجربة أولى، تقدر تبدأ بعبوة واحدة."],
+  ["واش الثمن كيتبدل من بعد الطلب؟", "لا. الثمن اللي كتشوف فالفورم هو نفس الثمن اللي كيتأكد معاك فالمكالمة، بلا مفاجآت وبلا دفع مسبق."],
+  ["واش كتوصلو لجميع المدن؟", "نعم، كنوصلو لجميع مدن المغرب. دخل المدينة ديالك فالفورم والفريق كيتاصل بك باش يأكد تفاصيل التوصيل."],
+  ["كيفاش نستعملو يومياً؟", "خليه روتين بسيط: كبسولتين يومياً مع كاس ماء، والأفضل بعد الوجبات الرئيسية وبنفس الوقت تقريباً كل نهار."],
+  ["إلى كان عندي سؤال قبل الطلب؟", "تقدر تطلب عادي، والفريق كيشرح لك التفاصيل فمكالمة التأكيد قبل ما يتجهز الطلب للإرسال."],
 ];
 
 function scrollToOrderForm() {
@@ -717,30 +721,109 @@ export default function ProductPage() {
       </section>
 
       <section className="section-padding bg-white">
-        <div className="container-main max-w-3xl">
-          <SectionHeader title="أسئلة شائعة" />
-          <div className="space-y-4">
-            {FAQS.map(([question, answer]) => (
-              <details key={question} className="card-base p-5">
-                <summary className="cursor-pointer list-none font-extrabold text-[#102033]">{question}</summary>
-                <p className="mt-3 text-sm leading-relaxed text-[#667085]">{answer}</p>
-              </details>
-            ))}
+        <div className="container-main">
+          <SectionHeader
+            kicker="قبل ما تطلب"
+            title="أسئلة شائعة كتجاوب على أي تردد قبل الطلب"
+            subtitle="وضحنا لك أهم التفاصيل: الدفع، التوصيل، طريقة التأكيد، والعرض المناسب."
+          />
+
+          <div className="grid gap-8 lg:grid-cols-[0.8fr_1.2fr] lg:items-start">
+            <div className="sticky top-24 rounded-[32px] bg-gradient-to-br from-[#102033] to-[#1E4A8C] p-6 text-white shadow-2xl">
+              <p className="text-sm font-black text-[#FDE68A]">ثقة قبل الطلب</p>
+              <h3 className="mt-2 text-3xl font-black leading-tight">كلشي واضح قبل ما يخرج الطلب من عندنا</h3>
+              <p className="mt-4 text-sm font-semibold leading-7 text-blue-100">
+                ماكاين لا دفع مسبق لا مفاجآت فالثمن. كنديرو تأكيد بالهاتف باش تعرف شنو طلبتي، شحال غادي تخلص، وفين غادي توصلك الشحنة.
+              </p>
+              <div className="mt-6 grid gap-3">
+                {["الدفع عند الاستلام", "تأكيد الطلب بالهاتف", "ثمن واضح قبل الإرسال"].map((item) => (
+                  <div key={item} className="rounded-2xl bg-white/10 px-4 py-3 text-sm font-black">
+                    ✓ {item}
+                  </div>
+                ))}
+              </div>
+              <button onClick={scrollToOrderForm} className="mt-6 w-full rounded-full bg-[#DC2626] px-6 py-3 text-sm font-black text-white transition hover:bg-red-700">
+                طلب آمن بالدفع عند الاستلام
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              {FAQS.map(([question, answer], index) => (
+                <details
+                  key={question}
+                  open={index === 0}
+                  className="group rounded-[26px] border border-gray-100 bg-white p-5 shadow-sm transition hover:border-[#D7E4F5] hover:shadow-lg"
+                >
+                  <summary className="flex cursor-pointer list-none items-center justify-between gap-4">
+                    <span className="text-base font-black leading-7 text-[#102033] md:text-lg">{question}</span>
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#EEF5FF] text-xl font-black text-[#1E4A8C] transition group-open:rotate-45">
+                      +
+                    </span>
+                  </summary>
+                  <p className="mt-4 border-t border-gray-100 pt-4 text-sm font-semibold leading-7 text-[#667085]">{answer}</p>
+                </details>
+              ))}
+            </div>
           </div>
         </div>
       </section>
 
-      <section className="section-padding bg-[#1E4A8C] text-white">
-        <div className="container-main max-w-3xl text-center">
-          <p className="text-5xl font-extrabold text-[#D4A017]">30</p>
-          <h2 className="mt-2 text-3xl font-extrabold md:text-4xl">يوم ضمان</h2>
-          <p className="mt-4 leading-relaxed text-blue-100">
-            ثقتك مهمة. إذا كان عندك أي مشكل في الطلب أو التوصيل، فريق الدعم يتواصل معك ويحل الموضوع بوضوح.
-          </p>
-          <button onClick={scrollToOrderForm} className="mt-8 rounded-full bg-[#DC2626] px-10 py-4 text-lg font-bold text-white transition-colors hover:bg-red-700">
-            اطلب الآن — الدفع عند الاستلام 🛒
-          </button>
-          <p className="mt-4 text-sm text-blue-100">🔒 بياناتك محمية بالكامل • الدفع عند الاستلام</p>
+      <section className="section-padding bg-[#102033] text-white">
+        <div className="container-main">
+          <div className="grid gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
+            <div className="relative overflow-hidden rounded-[36px] bg-gradient-to-br from-[#1E4A8C] via-[#102033] to-[#0B1724] p-8 shadow-2xl">
+              <div className="absolute -left-20 -top-20 h-56 w-56 rounded-full bg-[#D4A017]/20 blur-3xl" />
+              <div className="absolute -bottom-24 right-10 h-64 w-64 rounded-full bg-[#DC2626]/20 blur-3xl" />
+              <div className="relative z-10 text-center">
+                <p className="text-sm font-black text-[#FDE68A]">ضمان وراحة بال</p>
+                <div className="mx-auto mt-5 flex h-40 w-40 items-center justify-center rounded-full border-8 border-[#D4A017]/40 bg-white text-[#102033] shadow-2xl">
+                  <div>
+                    <p className="text-6xl font-black leading-none">30</p>
+                    <p className="text-sm font-black">يوم</p>
+                  </div>
+                </div>
+                <h2 className="mt-6 text-3xl font-black md:text-4xl">30 يوم ضمان</h2>
+                <p className="mx-auto mt-4 max-w-md text-sm font-semibold leading-7 text-blue-100">
+                  طلبك خاصو يكون واضح ومريح. إذا كان عندك أي مشكل فالتوصيل، التغليف، أو تفاصيل الطلب، فريق الدعم كيتواصل معاك وكيحل الموضوع بوضوح.
+                </p>
+              </div>
+            </div>
+
+            <div>
+              <h3 className="text-3xl font-black leading-tight md:text-4xl">
+                علاش تقدر تطلب بلا تردد؟
+              </h3>
+              <p className="mt-4 text-base font-semibold leading-8 text-blue-100">
+                العميل المغربي كيبغي الثقة قبل كلشي. لذلك خلينا الطلب بسيط: كتأكد بالهاتف، كتخلص حتى يوصلك، وعندك دعم واضح بعد الطلب.
+              </p>
+
+              <div className="mt-7 grid gap-4 md:grid-cols-3">
+                {[
+                  ["1", "كتأكد قبل الإرسال", "كنعيطو لك باش نراجعو العرض والمدينة والثمن النهائي."],
+                  ["2", "كتخلص حتى يوصلك", "ماكاين حتى دفع مسبق. الأداء كيكون عند الاستلام."],
+                  ["3", "دعم بعد الطلب", "إلى وقع أي مشكل، كاين فريق يتابع معاك بوضوح."],
+                ].map(([number, title, text]) => (
+                  <div key={number} className="rounded-[28px] bg-white/10 p-5 backdrop-blur">
+                    <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#D4A017] text-lg font-black text-[#102033]">
+                      {number}
+                    </span>
+                    <h4 className="mt-4 text-lg font-black">{title}</h4>
+                    <p className="mt-2 text-sm font-semibold leading-7 text-blue-100">{text}</p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-7 rounded-[28px] border border-white/15 bg-white/10 p-5">
+                <p className="text-lg font-black">الخطوة الوحيدة دابا: دخل معلوماتك وخلي الفريق يأكد معاك.</p>
+                <p className="mt-2 text-sm font-semibold leading-7 text-blue-100">
+                  الاسم، الهاتف، والمدينة كافيين باش نسجلو الطلب ونتواصلو معاك قبل الإرسال.
+                </p>
+                <button onClick={scrollToOrderForm} className="mt-5 rounded-full bg-[#DC2626] px-8 py-4 text-sm font-black text-white shadow-lg shadow-red-950/30 transition hover:bg-red-700">
+                  اطلب الآن — الدفع عند الاستلام
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
