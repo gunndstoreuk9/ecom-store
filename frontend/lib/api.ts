@@ -65,6 +65,7 @@ export interface Order {
 export async function createOrder(payload: CreateOrderPayload): Promise<Order> {
   return api<Order>("/v1/orders", {
     method: "POST",
+    headers: { "Content-Type": "text/plain" },
     body: JSON.stringify(payload),
   });
 }
