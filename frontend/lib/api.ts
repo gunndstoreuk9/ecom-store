@@ -11,6 +11,21 @@ export class ApiError extends Error {
   }
 }
 
+function detailToMessage(detail: unknown): string | null {
+  if (detail == null) return null;
+  if (typeof detail === "string") return detail;
+  if (Array.isArray(detail)) {
+    return detail
+      .map((item) => {
+        if (item && typeof item === "object" && "msg" in item) return String((item as { msg: unknown }).msg);
+        return typeof item === "string" ? item : JSON.stringify(item);
+      })
+      .join(" · ");
+  }
+  if (typeof detail === "object" && "msg" in (detail as object)) return String((detail as { msg: unknown }).msg);
+  return JSON.stringify(detail);
+}
+
 async function fetchWithRetry(url: string, options: RequestInit, retries = 1): Promise<Response> {
   try {
     const res = await fetch(url, options);
@@ -33,7 +48,7 @@ async function api<T>(path: string, options: RequestInit = {}): Promise<T> {
 
   const data = await res.json().catch(() => null);
   if (!res.ok) {
-    throw new ApiError(res.status, data?.detail ?? "Request failed", data);
+    throw new ApiError(res.status, detailToMessage(data?.detail) ?? `Request failed (${res.status})`, data);
   }
   return data as T;
 }

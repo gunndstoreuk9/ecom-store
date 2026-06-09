@@ -42,7 +42,7 @@ def admin_analytics(
 
 @router.get("/orders", response_model=AdminOrdersResponse)
 def admin_orders(
-    limit: int = Query(default=50, ge=1, le=200),
+    limit: int = Query(default=50, ge=1, le=500),
     offset: int = Query(default=0, ge=0),
     status_filter: Optional[str] = Query(default=None, alias="status"),
     call_status: Optional[str] = Query(default=None),
