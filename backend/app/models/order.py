@@ -24,6 +24,7 @@ class Order(Base):
     phone_hash_meta: Mapped[str] = mapped_column(String(64))
     phone_hash_tiktok: Mapped[str] = mapped_column(String(64))
     city: Mapped[Optional[str]] = mapped_column(String(120), nullable=True)
+    address: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     call_status: Mapped[Optional[str]] = mapped_column(String(40), nullable=True)
     call_note: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     call_attempts: Mapped[int] = mapped_column(Integer, default=0, server_default="0")

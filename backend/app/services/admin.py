@@ -4,7 +4,7 @@ from datetime import date, datetime, time, timedelta, timezone
 from typing import Optional
 from uuid import UUID
 
-from sqlalchemy import func, or_
+from sqlalchemy import case, func, or_
 from sqlalchemy.orm import Session, selectinload
 
 from app.models.order import Order, OrderItem
@@ -12,13 +12,17 @@ from app.schemas.admin import (
     CALL_STATUS_TO_ORDER_STATUS,
     RETRY_CALL_STATUSES,
     AdminAnalyticsResponse,
+    AdminCallCenterStats,
     AdminCityCount,
     AdminDailyRevenue,
+    AdminDispatchResponse,
     AdminFunnelStep,
     AdminOrderItem,
     AdminOrderListItem,
     AdminOrdersResponse,
     AdminPeriodMetric,
+    AdminRateByOffer,
+    AdminRatePeriod,
     AdminRateMetric,
     AdminSheetSyncCount,
     AdminStatusCount,
@@ -30,6 +34,9 @@ CONFIRMED_STATUSES = {"confirmed", "packed", "shipped", "delivered", "returned",
 CANCELLED_STATUSES = {"cancelled", "no_answer"}
 
 
+CONTACTABLE_STATUSES = {"new", "no_answer", "awaiting_confirmation"}
+
+
 def list_admin_orders(
     db: Session,
     *,
@@ -37,6 +44,7 @@ def list_admin_orders(
     offset: int,
     status: Optional[str] = None,
     call_status: Optional[str] = None,
+    bucket: Optional[str] = None,
     sheet_sync_status: Optional[str] = None,
     q: Optional[str] = None,
     date_from: Optional[date] = None,
@@ -47,6 +55,7 @@ def list_admin_orders(
         query,
         status=status,
         call_status=call_status,
+        bucket=bucket,
         sheet_sync_status=sheet_sync_status,
         q=q,
         date_from=date_from,
@@ -146,6 +155,138 @@ def update_admin_order_call(
     return to_admin_order(order)
 
 
+def update_admin_order_details(
+    db: Session,
+    order_id: str,
+    *,
+    customer_name: Optional[str] = None,
+    address: Optional[str] = None,
+    city: Optional[str] = None,
+    delivery_city: Optional[str] = None,
+    qty: Optional[int] = None,
+    total_mad: Optional[int] = None,
+) -> Optional[AdminOrderListItem]:
+    try:
+        order_uuid = UUID(order_id)
+    except ValueError:
+        return None
+    order = db.get(Order, order_uuid)
+    if not order:
+        return None
+
+    if customer_name is not None:
+        order.customer_name = customer_name.strip()
+    if address is not None:
+        order.address = address.strip() or None
+    if city is not None:
+        order.city = city.strip() or None
+    if delivery_city is not None:
+        order.delivery_city = delivery_city.strip() or None
+    if qty is not None:
+        order.hero_qty = qty
+    if total_mad is not None:
+        order.total_mad = total_mad
+        order.subtotal_mad = total_mad
+
+    new_qty = order.hero_qty or 1
+    order.hero_price_mad = round(order.total_mad / new_qty) if new_qty else order.total_mad
+    if order.items:
+        item = order.items[0]
+        item.qty = new_qty
+        item.total_price_mad = order.total_mad
+        item.unit_price_mad = order.hero_price_mad
+
+    db.commit()
+    db.refresh(order)
+    return to_admin_order(order)
+
+
+def dispatch_orders(
+    db: Session,
+    *,
+    order_ids: list[str],
+    delivery_company: Optional[str],
+    new_status: str,
+) -> AdminDispatchResponse:
+    uuids = []
+    for raw in order_ids:
+        try:
+            uuids.append(UUID(raw))
+        except ValueError:
+            continue
+    if not uuids:
+        return AdminDispatchResponse(updated=0, orders=[])
+
+    orders = db.query(Order).options(selectinload(Order.items)).filter(Order.id.in_(uuids)).all()
+    for order in orders:
+        order.status = new_status
+        if delivery_company:
+            order.delivery_company = delivery_company
+    db.commit()
+    for order in orders:
+        db.refresh(order)
+    return AdminDispatchResponse(updated=len(orders), orders=[to_admin_order(o) for o in orders])
+
+
+def get_call_center_stats(db: Session) -> AdminCallCenterStats:
+    now = datetime.now(timezone.utc)
+    today_start = datetime.combine(now.date(), time.min, tzinfo=timezone.utc)
+    yesterday_start = today_start - timedelta(days=1)
+    yesterday_end = today_start - timedelta(microseconds=1)
+    month_start = datetime(now.year, now.month, 1, tzinfo=timezone.utc)
+    last_month_end = month_start - timedelta(microseconds=1)
+    last_month_start = datetime(last_month_end.year, last_month_end.month, 1, tzinfo=timezone.utc)
+
+    periods = [
+        ("today", "Today", today_start, now),
+        ("yesterday", "Yesterday", yesterday_start, yesterday_end),
+        ("last_7_days", "Last 7 Days", now - timedelta(days=7), now),
+        ("last_15_days", "Last 15 Days", now - timedelta(days=15), now),
+        ("last_30_days", "Last 30 Days", now - timedelta(days=30), now),
+        ("last_month", "Last Month", last_month_start, last_month_end),
+        ("last_90_days", "Last 90 Days", now - timedelta(days=90), now),
+    ]
+    by_period = []
+    for key, label, start_at, end_at in periods:
+        total = _count_between(db, start_at, end_at)
+        confirmed = _count_between(db, start_at, end_at, CONFIRMED_STATUSES)
+        by_period.append(AdminRatePeriod(key=key, label=label, total=total, confirmed=confirmed, rate=_percent(confirmed, total)))
+
+    confirmed_expr = func.coalesce(func.sum(case((Order.status.in_(CONFIRMED_STATUSES), 1), else_=0)), 0)
+    rows = (
+        db.query(Order.hero_qty, func.count(Order.id), confirmed_expr)
+        .group_by(Order.hero_qty)
+        .order_by(Order.hero_qty.asc())
+        .all()
+    )
+    by_offer = []
+    for qty, total, confirmed in rows:
+        total_i = int(total or 0)
+        confirmed_i = int(confirmed or 0)
+        by_offer.append(
+            AdminRateByOffer(
+                offer_id=_offer_label(int(qty or 1)),
+                qty=int(qty or 1),
+                total=total_i,
+                confirmed=confirmed_i,
+                rate=_percent(confirmed_i, total_i),
+            )
+        )
+
+    return AdminCallCenterStats(by_period=by_period, by_offer=by_offer)
+
+
+def _count_between(db: Session, start_at: datetime, end_at: datetime, statuses: Optional[set[str]] = None) -> int:
+    query = db.query(func.count(Order.id)).filter(Order.created_at >= start_at, Order.created_at <= end_at)
+    if statuses:
+        query = query.filter(Order.status.in_(statuses))
+    return int(query.scalar() or 0)
+
+
+def _offer_label(qty: int) -> str:
+    return {1: "one", 2: "two", 3: "three"}.get(qty, "more")
+
+
 def to_admin_order(order: Order) -> AdminOrderListItem:
     return AdminOrderListItem(
         id=order.id,
@@ -155,6 +296,7 @@ def to_admin_order(order: Order) -> AdminOrderListItem:
         phone_local=order.phone_local,
         phone_e164=order.phone_e164,
         city=order.city,
+        address=order.address,
         call_status=order.call_status,
         call_note=order.call_note,
         call_attempts=order.call_attempts or 0,
@@ -182,11 +324,22 @@ def _apply_order_filters(
     *,
     status: Optional[str],
     call_status: Optional[str],
+    bucket: Optional[str] = None,
     sheet_sync_status: Optional[str],
     q: Optional[str],
     date_from: Optional[date],
     date_to: Optional[date],
 ):
+    if bucket == "new":
+        query = query.filter(Order.call_status.is_(None), Order.status == "new")
+    elif bucket == "follow_up":
+        query = query.filter(Order.call_status.in_(RETRY_CALL_STATUSES))
+    elif bucket == "contactable":
+        query = query.filter(Order.status.in_(CONTACTABLE_STATUSES))
+    elif bucket == "confirmed":
+        query = query.filter(Order.status == "confirmed")
+    elif bucket == "shipped":
+        query = query.filter(Order.status == "shipped")
     if status:
         query = query.filter(Order.status == status)
     if call_status:

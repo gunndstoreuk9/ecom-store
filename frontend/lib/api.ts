@@ -79,6 +79,7 @@ export interface AdminOrder {
   phone_local: string;
   phone_e164: string;
   city?: string | null;
+  address?: string | null;
   call_status?: string | null;
   call_note?: string | null;
   call_attempts: number;
@@ -101,6 +102,41 @@ export interface AdminOrderCallPayload {
   call_note?: string;
   delivery_company?: string;
   delivery_city?: string;
+}
+
+export interface AdminOrderEditPayload {
+  customer_name?: string;
+  address?: string;
+  city?: string;
+  delivery_city?: string;
+  qty?: number;
+  total_mad?: number;
+}
+
+export interface AdminRatePeriod {
+  key: string;
+  label: string;
+  total: number;
+  confirmed: number;
+  rate: number;
+}
+
+export interface AdminRateByOffer {
+  offer_id: string;
+  qty: number;
+  total: number;
+  confirmed: number;
+  rate: number;
+}
+
+export interface AdminCallCenterStats {
+  by_period: AdminRatePeriod[];
+  by_offer: AdminRateByOffer[];
+}
+
+export interface AdminDispatchResponse {
+  updated: number;
+  orders: AdminOrder[];
 }
 
 export interface AdminOrdersResponse {
@@ -197,6 +233,7 @@ export async function getAdminOrders(
     offset?: number;
     status?: string;
     call_status?: string;
+    bucket?: string;
     sheet_sync_status?: string;
     q?: string;
   } = {}
@@ -223,5 +260,27 @@ export async function updateAdminOrderCall(adminKey: string, orderId: string, pa
     method: "PATCH",
     headers: { "X-Admin-Key": adminKey },
     body: JSON.stringify(payload),
+  });
+}
+
+export async function editAdminOrder(adminKey: string, orderId: string, payload: AdminOrderEditPayload): Promise<AdminOrder> {
+  return api<AdminOrder>(`/v1/admin/orders/${orderId}/details`, {
+    method: "PATCH",
+    headers: { "X-Admin-Key": adminKey },
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function getCallCenterStats(adminKey: string): Promise<AdminCallCenterStats> {
+  return api<AdminCallCenterStats>(`/v1/admin/call-center/stats`, {
+    headers: { "X-Admin-Key": adminKey },
+  });
+}
+
+export async function dispatchOrders(adminKey: string, orderIds: string[], deliveryCompany: string): Promise<AdminDispatchResponse> {
+  return api<AdminDispatchResponse>(`/v1/admin/dispatch`, {
+    method: "POST",
+    headers: { "X-Admin-Key": adminKey },
+    body: JSON.stringify({ order_ids: orderIds, delivery_company: deliveryCompany, status: "shipped" }),
   });
 }

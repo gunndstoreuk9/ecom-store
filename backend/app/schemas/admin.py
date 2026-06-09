@@ -60,6 +60,7 @@ class AdminOrderListItem(BaseModel):
     phone_local: str
     phone_e164: str
     city: Optional[str] = None
+    address: Optional[str] = None
     call_status: Optional[str] = None
     call_note: Optional[str] = None
     call_attempts: int = 0
@@ -173,3 +174,53 @@ class AdminOrderCallUpdate(BaseModel):
             allowed = ", ".join(sorted(CALL_STATUSES))
             raise ValueError(f"Call status must be one of: {allowed}")
         return normalized
+
+
+class AdminOrderEditUpdate(BaseModel):
+    customer_name: Optional[str] = Field(default=None, min_length=2, max_length=160)
+    address: Optional[str] = Field(default=None, max_length=2000)
+    city: Optional[str] = Field(default=None, max_length=120)
+    delivery_city: Optional[str] = Field(default=None, max_length=120)
+    qty: Optional[int] = Field(default=None, ge=1, le=99)
+    total_mad: Optional[int] = Field(default=None, ge=0, le=1000000)
+
+
+class AdminDispatchRequest(BaseModel):
+    order_ids: list[str] = Field(min_length=1)
+    delivery_company: Optional[str] = Field(default=None, max_length=64)
+    status: str = Field(default="shipped")
+
+    @field_validator("status")
+    @classmethod
+    def validate_status(cls, value: str) -> str:
+        normalized = value.strip().lower()
+        if normalized not in ORDER_STATUSES:
+            allowed = ", ".join(sorted(ORDER_STATUSES))
+            raise ValueError(f"Status must be one of: {allowed}")
+        return normalized
+
+
+class AdminDispatchResponse(BaseModel):
+    updated: int
+    orders: list[AdminOrderListItem]
+
+
+class AdminRatePeriod(BaseModel):
+    key: str
+    label: str
+    total: int
+    confirmed: int
+    rate: float
+
+
+class AdminRateByOffer(BaseModel):
+    offer_id: str
+    qty: int
+    total: int
+    confirmed: int
+    rate: float
+
+
+class AdminCallCenterStats(BaseModel):
+    by_period: list[AdminRatePeriod]
+    by_offer: list[AdminRateByOffer]

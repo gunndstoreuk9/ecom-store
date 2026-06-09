@@ -10,15 +10,22 @@ from app.core.database import get_db
 from app.core.security import require_admin_key
 from app.schemas.admin import (
     AdminAnalyticsResponse,
+    AdminCallCenterStats,
+    AdminDispatchRequest,
+    AdminDispatchResponse,
     AdminOrderCallUpdate,
+    AdminOrderEditUpdate,
     AdminOrderListItem,
     AdminOrdersResponse,
     AdminOrderStatusUpdate,
 )
 from app.services.admin import (
+    dispatch_orders,
     get_admin_analytics,
+    get_call_center_stats,
     list_admin_orders,
     update_admin_order_call,
+    update_admin_order_details,
     update_admin_order_status,
 )
 
@@ -39,6 +46,7 @@ def admin_orders(
     offset: int = Query(default=0, ge=0),
     status_filter: Optional[str] = Query(default=None, alias="status"),
     call_status: Optional[str] = Query(default=None),
+    bucket: Optional[str] = Query(default=None),
     sheet_sync_status: Optional[str] = Query(default=None),
     q: Optional[str] = Query(default=None, max_length=160),
     date_from: Optional[date] = Query(default=None),
@@ -51,6 +59,7 @@ def admin_orders(
         offset=offset,
         status=status_filter,
         call_status=call_status,
+        bucket=bucket,
         sheet_sync_status=sheet_sync_status,
         q=q,
         date_from=date_from,
@@ -87,3 +96,42 @@ def admin_update_order_call(
     if not order:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
     return order
+
+
+@router.patch("/orders/{order_id}/details", response_model=AdminOrderListItem)
+def admin_update_order_details(
+    order_id: str,
+    payload: AdminOrderEditUpdate,
+    db: Session = Depends(get_db),
+) -> AdminOrderListItem:
+    order = update_admin_order_details(
+        db,
+        order_id,
+        customer_name=payload.customer_name,
+        address=payload.address,
+        city=payload.city,
+        delivery_city=payload.delivery_city,
+        qty=payload.qty,
+        total_mad=payload.total_mad,
+    )
+    if not order:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
+    return order
+
+
+@router.get("/call-center/stats", response_model=AdminCallCenterStats)
+def admin_call_center_stats(db: Session = Depends(get_db)) -> AdminCallCenterStats:
+    return get_call_center_stats(db)
+
+
+@router.post("/dispatch", response_model=AdminDispatchResponse)
+def admin_dispatch_orders(
+    payload: AdminDispatchRequest,
+    db: Session = Depends(get_db),
+) -> AdminDispatchResponse:
+    return dispatch_orders(
+        db,
+        order_ids=payload.order_ids,
+        delivery_company=payload.delivery_company,
+        new_status=payload.status,
+    )
