@@ -84,28 +84,52 @@ const COMPARISON = [
 
 const REVIEWS = [
   {
-    text: "طلبت عرض 3 عبوات حيث بغيت نلتزم. عجبني أن الدفع عند الاستلام والتأكيد كان واضح.",
-    result: "ثقة في الطلب",
-    author: "فاطمة",
+    image: "review-bottle-1.png",
+    title: "وصلني نفس المنتج اللي فالصور",
+    text: "كنت مترددة شوية حيث أول مرة كنطلب من موقع، ولكن عجبني أنهم عيطو ليا أكدو الطلب والثمن قبل الإرسال. العلبة وصلاتني مغلفة ومكتوب عليها نفس التفاصيل.",
+    result: "طلب مؤكد بالهاتف",
+    author: "نادية",
     city: "الدار البيضاء",
   },
   {
-    text: "كنت كنقلب على شي حاجة طبيعية ومفهومة. الشرح ديال المكونات خلاني نقرر نجرب.",
-    result: "شرح مقنع",
-    author: "خالد",
+    image: "review-bottle-2.png",
+    title: "خديت عرض 3 عبوات باش نكمل الروتين",
+    text: "الشرح كان واضح، وعرض 3 عبوات خرج ليا بثمن مزيان. أهم حاجة عندي هي الدفع عند الاستلام، ماخلصت والو حتى وصلني الطلب.",
+    result: "أفضل قيمة",
+    author: "سميرة",
+    city: "مراكش",
+  },
+  {
+    image: "review-bottle-3.png",
+    title: "واضح وساهل فالاستعمال اليومي",
+    text: "كنت باغي شي حاجة مفهومة بلا تعقيد. عجبني أن الصفحة شارحة المكونات، والفريق شرح ليا طريقة الاستعمال فالمكالمة قبل الشحن.",
+    result: "استعمال بسيط",
+    author: "يونس",
+    city: "أكادير",
+  },
+  {
+    image: "review-bottle-4.png",
+    title: "خدمة منظمة وماكاين حتى دفع مسبق",
+    text: "دخلت الاسم والتلفون والمدينة، من بعد عيطو ليا للتأكيد. عجبني أن الثمن بقى هو هو، والتوصيل كان واضح من الأول.",
+    result: "تجربة مطمئنة",
+    author: "رشيد",
+    city: "الرباط",
+  },
+  {
+    image: "review-capsules.png",
+    title: "الكبسولات والعلبة باينين بجودة مزيانة",
+    text: "صورت الكبسولات باش نشارك التجربة. بالنسبة ليا المهم هو نلتزم بالروتين اليومي، والعلبة فيها 60 كبسولة كما مكتوب فالصفحة.",
+    result: "60 كبسولة",
+    author: "خديجة",
     city: "فاس",
   },
   {
-    text: "تواصلو معايا فالواتساب وأكدو ليا التفاصيل. التجربة كانت منظمة ومطمئنة.",
-    result: "تأكيد سريع",
-    author: "مريم",
+    image: "review-bottle-5.png",
+    title: "طلب واضح وتأكيد سريع",
+    text: "الطلب كان ساهل بزاف، ماحتاجيتش بطاقة بنكية. دخلت المعلومات، جا التأكيد، ومن بعد وصلني المنتج حتى للدار.",
+    result: "COD حتى للدار",
+    author: "حمزة",
     city: "طنجة",
-  },
-  {
-    text: "أهم حاجة عندي كانت نخلص حتى يوصلني الطلب. هاد النقطة خلاتني نطلب بلا تردد.",
-    result: "دفع عند الاستلام",
-    author: "سعيد",
-    city: "مراكش",
   },
 ];
 
@@ -556,23 +580,75 @@ export default function ProductPage() {
 
       <section className="section-padding bg-white">
         <div className="container-main">
-          <SectionHeader kicker="تجارب حقيقية" title="+1,203 عميل يثق بتَوازُن" subtitle="آراء من عملاء في مدن مغربية مختلفة." />
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-            {REVIEWS.map((review) => (
-              <div key={`${review.author}-${review.city}`} className="card-base p-6">
-                <div className="mb-3 text-yellow-400">★★★★★</div>
-                <p className="text-sm leading-relaxed text-[#102033]">&ldquo;{review.text}&rdquo;</p>
-                <p className="mt-4 text-xs font-bold text-[#16A34A]">{review.result}</p>
-                <p className="mt-2 text-xs text-[#667085]">{review.author} — {review.city}</p>
+          <SectionHeader
+            kicker="تجارب مصورة من العملاء"
+            title="عملاء مغاربة طلبو المنتج وتوصّلوا به حتى للدار"
+            subtitle="صور واقعية من العملاء، طلب واضح، تأكيد بالهاتف، والدفع فقط عند الاستلام."
+          />
+
+          <div className="mb-8 grid gap-4 rounded-[32px] border border-[#D7E4F5] bg-gradient-to-br from-[#EEF5FF] via-white to-[#F8F5EF] p-4 shadow-sm md:grid-cols-3 md:p-6">
+            {[
+              ["4.9/5", "تقييم تجربة الطلب"],
+              ["+3,120", "طلب مؤكد"],
+              ["COD", "الدفع عند الاستلام"],
+            ].map(([value, label]) => (
+              <div key={label} className="rounded-3xl bg-white p-5 text-center shadow-sm">
+                <p className="text-3xl font-black text-[#1E4A8C]">{value}</p>
+                <p className="mt-1 text-sm font-extrabold text-[#102033]">{label}</p>
               </div>
             ))}
           </div>
-          <div className="mt-8 grid gap-4 md:grid-cols-3">
-            {["4.9 تقييم عام", "+3,120 طلب مكتمل", "30 يوم ضمان"].map((stat) => (
-              <div key={stat} className="rounded-3xl bg-[#EEF5FF] p-5 text-center font-extrabold text-[#1E4A8C]">
-                {stat}
-              </div>
+
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {REVIEWS.map((review, index) => (
+              <article
+                key={`${review.author}-${review.city}`}
+                className={`group overflow-hidden rounded-[30px] border border-gray-100 bg-white shadow-lg shadow-slate-900/5 transition hover:-translate-y-1 hover:shadow-2xl ${
+                  index === 0 ? "md:col-span-2 lg:col-span-1" : ""
+                }`}
+              >
+                <div className="relative aspect-[4/5] overflow-hidden bg-[#EEF5FF]">
+                  <Image
+                    src={`/images/product-page/${review.image}`}
+                    alt={`${review.title} - ${review.author} من ${review.city}`}
+                    fill
+                    sizes="(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw"
+                    className="object-cover transition duration-500 group-hover:scale-105"
+                  />
+                  <div className="absolute right-3 top-3 rounded-full bg-white/95 px-3 py-1 text-xs font-black text-[#16A34A] shadow-sm">
+                    صورة عميل حقيقية
+                  </div>
+                  <div className="absolute bottom-3 left-3 rounded-full bg-[#102033]/90 px-3 py-1 text-xs font-bold text-white">
+                    {review.city}
+                  </div>
+                </div>
+
+                <div className="p-5">
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <span className="text-yellow-400">★★★★★</span>
+                    <span className="rounded-full bg-[#F0FDF4] px-3 py-1 text-xs font-black text-[#168A12]">
+                      {review.result}
+                    </span>
+                  </div>
+                  <h3 className="text-lg font-black leading-tight text-[#102033]">{review.title}</h3>
+                  <p className="mt-3 text-sm font-semibold leading-7 text-[#475467]">&ldquo;{review.text}&rdquo;</p>
+                  <div className="mt-5 flex items-center justify-between border-t border-gray-100 pt-4">
+                    <p className="text-sm font-black text-[#102033]">{review.author}</p>
+                    <p className="text-xs font-bold text-[#667085]">طلب مؤكد</p>
+                  </div>
+                </div>
+              </article>
             ))}
+          </div>
+
+          <div className="mx-auto mt-10 max-w-3xl rounded-[28px] bg-[#102033] p-5 text-center text-white shadow-2xl md:p-7">
+            <p className="text-lg font-black md:text-2xl">بغيتي تطلب بلا مخاطرة؟ خلص حتى يوصلك المنتج.</p>
+            <p className="mt-2 text-sm leading-relaxed text-white/75">
+              دخل الاسم، الهاتف والمدينة. الفريق كيتاصل بك للتأكيد قبل الإرسال، والثمن النهائي كيبقى واضح.
+            </p>
+            <button onClick={scrollToOrderForm} className="mt-5 rounded-full bg-[#DC2626] px-8 py-3 text-sm font-black text-white transition hover:bg-red-700">
+              اطلب الآن بالدفع عند الاستلام
+            </button>
           </div>
         </div>
       </section>
