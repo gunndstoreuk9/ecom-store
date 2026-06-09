@@ -62,6 +62,81 @@ export interface Order {
   total_mad: number;
 }
 
+export interface AdminOrderItem {
+  sku: string;
+  name_ar: string;
+  qty: number;
+  unit_price_mad: number;
+  total_price_mad: number;
+  item_type: string;
+}
+
+export interface AdminOrder {
+  id: string;
+  public_order_number: string;
+  status: string;
+  customer_name: string;
+  phone_local: string;
+  phone_e164: string;
+  city?: string | null;
+  hero_sku: string;
+  hero_qty: number;
+  total_mad: number;
+  currency: string;
+  sheet_sync_status: string;
+  sheet_last_error?: string | null;
+  created_at: string;
+  updated_at: string;
+  utm?: Record<string, string> | null;
+  items: AdminOrderItem[];
+}
+
+export interface AdminOrdersResponse {
+  total: number;
+  limit: number;
+  offset: number;
+  orders: AdminOrder[];
+}
+
+export interface AdminStatusCount {
+  status: string;
+  count: number;
+  total_mad: number;
+}
+
+export interface AdminDailyRevenue {
+  date: string;
+  orders: number;
+  total_mad: number;
+}
+
+export interface AdminCityCount {
+  city: string;
+  orders: number;
+  total_mad: number;
+}
+
+export interface AdminSheetSyncCount {
+  status: string;
+  count: number;
+}
+
+export interface AdminAnalytics {
+  days: number;
+  total_orders: number;
+  total_revenue_mad: number;
+  average_order_value_mad: number;
+  today_orders: number;
+  today_revenue_mad: number;
+  pending_sheet_sync: number;
+  failed_sheet_sync: number;
+  status_breakdown: AdminStatusCount[];
+  sheet_sync_breakdown: AdminSheetSyncCount[];
+  daily_revenue: AdminDailyRevenue[];
+  top_cities: AdminCityCount[];
+  recent_orders: AdminOrder[];
+}
+
 export async function createOrder(payload: CreateOrderPayload): Promise<Order> {
   return api<Order>("/v1/orders", {
     method: "POST",
@@ -72,4 +147,37 @@ export async function createOrder(payload: CreateOrderPayload): Promise<Order> {
 
 export async function getOrder(orderId: string): Promise<Order> {
   return api<Order>(`/v1/orders/${orderId}`);
+}
+
+export async function getAdminAnalytics(adminKey: string, days = 30): Promise<AdminAnalytics> {
+  return api<AdminAnalytics>(`/v1/admin/analytics?days=${days}`, {
+    headers: { "X-Admin-Key": adminKey },
+  });
+}
+
+export async function getAdminOrders(
+  adminKey: string,
+  params: {
+    limit?: number;
+    offset?: number;
+    status?: string;
+    sheet_sync_status?: string;
+    q?: string;
+  } = {}
+): Promise<AdminOrdersResponse> {
+  const search = new URLSearchParams();
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== "") search.set(key, String(value));
+  });
+  return api<AdminOrdersResponse>(`/v1/admin/orders?${search.toString()}`, {
+    headers: { "X-Admin-Key": adminKey },
+  });
+}
+
+export async function updateAdminOrderStatus(adminKey: string, orderId: string, status: string): Promise<AdminOrder> {
+  return api<AdminOrder>(`/v1/admin/orders/${orderId}/status`, {
+    method: "PATCH",
+    headers: { "X-Admin-Key": adminKey },
+    body: JSON.stringify({ status }),
+  });
 }

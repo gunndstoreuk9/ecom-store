@@ -12,6 +12,7 @@ FastAPI backend for the Tawazon Health Morocco COD store.
 - Alembic migration runs on Docker startup.
 - Google Sheets webhook sync with safe failure handling.
 - Placeholder conversion event records for Meta/TikTok/Google integrations.
+- Protected admin endpoints for orders, revenue, status tracking, and Sheets sync health.
 
 ## Local Setup
 
@@ -31,7 +32,10 @@ DATABASE_URL=postgres://tawazonhealth:tawazonhealth@tawazon_database:5432/tawazo
 FRONTEND_URL=https://tawazonhealth.store
 CORS_ORIGINS=https://tawazonhealth.store,https://www.tawazonhealth.store
 SHEETS_WEBHOOK_URL=<apps-script-webhook-url>
+ADMIN_API_KEY=<long-random-admin-key>
 ```
+
+Open `https://tawazonhealth.store/admin` and enter the same `ADMIN_API_KEY` to access the dashboard.
 
 The container command runs:
 

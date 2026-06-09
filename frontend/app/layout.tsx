@@ -1,11 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { TrustStrip } from "@/components/layout/TrustStrip";
-import { Header } from "@/components/layout/Header";
-import { Footer } from "@/components/layout/Footer";
-import { CartDrawer } from "@/components/cart/CartDrawer";
-import { CartProvider } from "@/components/cart/CartProvider";
-import { PixelScripts } from "@/components/tracking/PixelScripts";
+import { SiteChrome } from "@/components/layout/SiteChrome";
 import { SITE } from "@/config/site";
 
 export const metadata: Metadata = {
@@ -35,14 +30,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body suppressHydrationWarning>
-        <CartProvider>
-          <PixelScripts />
-          <TrustStrip />
-          <Header />
-          <main>{children}</main>
-          <Footer />
-          <CartDrawer />
-        </CartProvider>
+        <SiteChrome>{children}</SiteChrome>
       </body>
     </html>
   );
