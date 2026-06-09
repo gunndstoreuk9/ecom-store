@@ -71,7 +71,6 @@ Required:
 - `CORS_ORIGINS`
 - `DATABASE_URL`
 - `SHEETS_WEBHOOK_URL`
-- `SHEETS_WEBHOOK_SECRET`
 
 Tracking:
 
@@ -86,7 +85,6 @@ Tracking:
 
 Security:
 
-- `ORDER_WEBHOOK_SECRET`
 - `ADMIN_API_KEY` if admin endpoints are added
 
 ## Folder Structure

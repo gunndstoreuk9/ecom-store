@@ -16,7 +16,6 @@ class Settings(BaseSettings):
         alias="DATABASE_URL",
     )
     sheets_webhook_url: str = Field(default="", alias="SHEETS_WEBHOOK_URL")
-    sheets_webhook_secret: str = Field(default="", alias="SHEETS_WEBHOOK_SECRET")
     meta_pixel_id: str = Field(default="", alias="META_PIXEL_ID")
     meta_capi_access_token: str = Field(default="", alias="META_CAPI_ACCESS_TOKEN")
     meta_test_event_code: str = Field(default="", alias="META_TEST_EVENT_CODE")

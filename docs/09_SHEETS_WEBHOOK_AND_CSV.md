@@ -9,7 +9,6 @@ The sheet is the working dashboard for:
 - calling customers
 - confirming address
 - tracking delivery status
-- seeing upsell take rate
 - exporting orders to carrier
 
 ## Files
@@ -29,62 +28,52 @@ When implementation starts, the coder should also copy:
 
 ## Sheet Tabs
 
-Create a Google Sheet with these tabs:
+Create a Google Sheet with this tab:
 
-1. `Orders`
-2. `Products`
-3. `Events` optional later
+1. `Sheet1`
 
-Import the CSV templates into the first two tabs.
+Import `orders_sheet_template.csv` into `Sheet1`.
 
 ## Orders Columns
 
 Required columns are in `orders_sheet_template.csv`.
 
-Important operational columns:
+Required columns:
 
-- `status`
-- `customer_name`
-- `phone_local`
-- `phone_e164`
-- `city`
-- `address`
-- `confirmation_notes`
-- `carrier`
-- `tracking_number`
+- `DATE`
+- `ORDERID`
+- `CITY`
+- `FULL NAME`
+- `PHONE NUMBER`
+- `PRODUCT`
+- `SKU`
+- `QUANTITY`
+- `TOTAL PRICE MAD`
+- `CURRENCY`
+- `STATUS`
 
-The website only collects name and phone. City/address are filled after confirmation call.
+The website only collects name and phone. `CITY` is sent as `AGADIR`. `STATUS` is intentionally empty for operations.
 
 ## Webhook Security
 
-Apps Script should require a shared secret.
+Apps Script does not require a shared secret for this MVP. Protect the URL and do not publish it publicly.
 
 Backend sends:
 
 ```json
 {
-  "secret": "<SHEETS_WEBHOOK_SECRET>",
   "action": "upsert_order",
   "order": {}
 }
 ```
 
-This is simple and enough for MVP. If upgrading later, use HMAC signatures.
+If upgrading later, use HMAC signatures or a shared secret again.
 
 ## Backend Webhook Behavior
 
-On base order creation:
+On order creation, send the order immediately to Google Sheets.
 
-- create DB order as `upsell_pending`
-- send sheet webhook if desired, or wait until upsell decision
-
-Recommended:
-
-1. Send base order immediately with `upsell_status=awaiting`.
-2. When upsell accept/skip/timeout occurs, call webhook again with same `order_id`.
-3. Apps Script upserts the same row.
-
-This protects lead capture and keeps the sheet final.
+Apps Script upserts by `ORDERID`, so retrying the same order updates the same row instead of creating duplicates.
 
 ## Apps Script Deployment
 
@@ -93,15 +82,12 @@ Steps:
 1. Open the Google Sheet.
 2. Extensions -> Apps Script.
 3. Paste `docs/apps-script/Code.gs`.
-4. Set script property:
-   - key: `WEBHOOK_SECRET`
-   - value: same as backend `SHEETS_WEBHOOK_SECRET`
-5. Deploy -> New deployment.
-6. Type: Web app.
-7. Execute as: Me.
-8. Who has access: Anyone with the link.
-9. Copy deployment URL.
-10. Add URL to backend env:
+4. Deploy -> New deployment.
+5. Type: Web app.
+6. Execute as: Me.
+7. Who has access: Anyone with the link.
+8. Copy deployment URL.
+9. Add URL to backend env:
     - `SHEETS_WEBHOOK_URL`
 
 ## Apps Script Actions
@@ -113,7 +99,7 @@ Supported:
 
 `upsert_order`:
 
-- finds row by `order_id`
+- finds row by `ORDERID`
 - updates it if found
 - appends it if not found
 
@@ -127,33 +113,19 @@ Backend should send:
 
 ```json
 {
-  "secret": "secret",
   "action": "upsert_order",
   "order": {
-    "order_id": "uuid",
-    "public_order_number": "TWZ-10001",
-    "created_at": "2026-06-06T20:00:00Z",
-    "updated_at": "2026-06-06T20:01:00Z",
-    "status": "new",
-    "customer_name": "Fatima",
-    "phone_raw": "0612345678",
-    "phone_local": "0612345678",
-    "phone_e164": "+212612345678",
-    "hero_sku": "american-sugar-balance-complex",
-    "hero_qty": 3,
-    "hero_price_mad": 349,
-    "upsell_status": "accepted",
-    "upsell_sku": "cravings-support",
-    "upsell_price_mad": 99,
-    "total_mad": 448,
-    "currency": "MAD",
-    "items_summary": "المركّب الأمريكي لضبط السكر x3 = 349; علكات دعم الرغبة في الحلويات x1 = 99",
-    "utm_source": "facebook",
-    "utm_campaign": "campaign",
-    "landing_page": "https://tawazonhealth.store/products/american-sugar-balance-complex",
-    "meta_event_id": "twz_meta",
-    "tiktok_event_id": "twz_tt",
-    "google_transaction_id": "twz_google"
+    "DATE": "01/05/2026",
+    "ORDERID": "TAWAZON10001",
+    "CITY": "AGADIR",
+    "FULL NAME": "Fatima",
+    "PHONE NUMBER": "212604752334",
+    "PRODUCT": "المركّب الأمريكي لضبط السكر — الأصلي",
+    "SKU": "TOPLUX-BSC-940-60",
+    "QUANTITY": "3",
+    "TOTAL PRICE MAD": 349,
+    "CURRENCY": "MAD",
+    "STATUS": ""
   }
 }
 ```

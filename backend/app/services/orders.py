@@ -18,6 +18,8 @@ from app.services.phone import (
 
 
 PRODUCT_NAME_AR = "المركّب الأمريكي لضبط السكر — الأصلي"
+PRODUCT_SHEET_SKU = "TOPLUX-BSC-940-60"
+SHEET_CITY = "AGADIR"
 
 
 def create_order(
@@ -106,53 +108,29 @@ def to_order_detail_response(order: Order) -> OrderDetailResponse:
 
 
 def order_sheet_payload(order: Order) -> dict:
-    now = datetime.now(timezone.utc).isoformat()
+    created_at = order.created_at or datetime.now(timezone.utc)
+    product_names = [item.name_ar for item in order.items] or [PRODUCT_NAME_AR]
+    product_skus = [PRODUCT_SHEET_SKU for _ in product_names]
+    product_quantities = [str(item.qty) for item in order.items] or [str(order.hero_qty)]
+
     return {
-        "order_id": str(order.id),
-        "public_order_number": order.public_order_number,
-        "created_at": order.created_at.isoformat() if order.created_at else now,
-        "updated_at": order.updated_at.isoformat() if order.updated_at else now,
-        "status": order.status,
-        "customer_name": order.customer_name,
-        "phone_raw": order.phone_raw,
-        "phone_local": order.phone_local,
-        "phone_e164": order.phone_e164,
-        "city": order.city or "",
-        "address": "",
-        "confirmation_notes": "",
-        "hero_sku": order.hero_sku,
-        "hero_qty": order.hero_qty,
-        "hero_price_mad": order.hero_price_mad,
-        "drawer_cross_sells": "[]",
-        "upsell_status": "disabled",
-        "upsell_sku": "",
-        "upsell_price_mad": "",
-        "items_summary": f"{PRODUCT_NAME_AR} x{order.hero_qty} = {order.hero_price_mad}",
-        "subtotal_mad": order.subtotal_mad,
-        "total_mad": order.total_mad,
-        "currency": order.currency,
-        "utm_source": (order.utm or {}).get("utm_source", ""),
-        "utm_medium": (order.utm or {}).get("utm_medium", ""),
-        "utm_campaign": (order.utm or {}).get("utm_campaign", ""),
-        "utm_content": (order.utm or {}).get("utm_content", ""),
-        "utm_term": (order.utm or {}).get("utm_term", ""),
-        "landing_page": (order.utm or {}).get("landing_page", ""),
-        "referrer": (order.utm or {}).get("referrer", ""),
-        "meta_event_id": order.event_id or "",
-        "tiktok_event_id": order.event_id or "",
-        "google_transaction_id": order.event_id or "",
-        "fbp": (order.utm or {}).get("fbp", ""),
-        "fbc": (order.utm or {}).get("fbc", ""),
-        "ttp": (order.utm or {}).get("ttp", ""),
-        "ttclid": (order.utm or {}).get("ttclid", ""),
-        "carrier": "",
-        "tracking_number": "",
+        "DATE": created_at.strftime("%d/%m/%Y"),
+        "ORDERID": order.public_order_number,
+        "CITY": SHEET_CITY,
+        "FULL NAME": order.customer_name,
+        "PHONE NUMBER": order.phone_e164.replace("+", ""),
+        "PRODUCT": "/".join(product_names),
+        "SKU": "/".join(product_skus),
+        "QUANTITY": "/".join(product_quantities),
+        "TOTAL PRICE MAD": order.total_mad,
+        "CURRENCY": "MAD",
+        "STATUS": "",
     }
 
 
 def _next_public_order_number(db: Session) -> str:
     count = db.query(Order).count() + 10001
-    return f"TWZ-{count}"
+    return f"TAWAZON{count}"
 
 
 def _offer_id_from_qty(qty: int) -> str:

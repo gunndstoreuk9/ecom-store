@@ -1,74 +1,37 @@
-const ORDERS_SHEET_NAME = 'Orders';
-const PRODUCTS_SHEET_NAME = 'Products';
+const ORDERS_SHEET_NAME = 'Sheet1';
 
 const ORDER_HEADERS = [
-  'order_id',
-  'public_order_number',
-  'created_at',
-  'updated_at',
-  'status',
-  'customer_name',
-  'phone_raw',
-  'phone_local',
-  'phone_e164',
-  'city',
-  'address',
-  'confirmation_notes',
-  'hero_sku',
-  'hero_qty',
-  'hero_price_mad',
-  'drawer_cross_sells',
-  'upsell_status',
-  'upsell_sku',
-  'upsell_price_mad',
-  'items_summary',
-  'subtotal_mad',
-  'total_mad',
-  'currency',
-  'utm_source',
-  'utm_medium',
-  'utm_campaign',
-  'utm_content',
-  'utm_term',
-  'landing_page',
-  'referrer',
-  'meta_event_id',
-  'tiktok_event_id',
-  'google_transaction_id',
-  'fbp',
-  'fbc',
-  'ttp',
-  'ttclid',
-  'carrier',
-  'tracking_number',
-  'sheet_updated_at'
+  'DATE',
+  'ORDERID',
+  'CITY',
+  'FULL NAME',
+  'PHONE NUMBER',
+  'PRODUCT',
+  'SKU',
+  'QUANTITY',
+  'TOTAL PRICE MAD',
+  'CURRENCY',
+  'STATUS'
 ];
 
 function doGet() {
-  return jsonResponse({ ok: true, service: 'tawazon-sheets-webhook' });
+  return jsonResponse({ ok: true, service: 'tawazon-orders-webhook' });
 }
 
 function doPost(e) {
   try {
     const body = parseBody(e);
-    const action = body.action || '';
+    const result = upsertOrder(body.order || body);
 
-    if (!isAuthorized(body)) {
-      return jsonResponse({ ok: false, error: 'unauthorized' }, 401);
-    }
-
-    if (action === 'ping') {
-      return jsonResponse({ ok: true });
-    }
-
-    if (action === 'upsert_order') {
-      const result = upsertOrder(body.order || {});
-      return jsonResponse({ ok: true, result });
-    }
-
-    return jsonResponse({ ok: false, error: 'unsupported_action' }, 400);
+    return jsonResponse({
+      ok: true,
+      result: result
+    });
   } catch (error) {
-    return jsonResponse({ ok: false, error: String(error && error.message ? error.message : error) }, 500);
+    return jsonResponse({
+      ok: false,
+      error: String(error && error.message ? error.message : error)
+    });
   }
 }
 
@@ -80,30 +43,21 @@ function parseBody(e) {
   return JSON.parse(e.postData.contents);
 }
 
-function isAuthorized(body) {
-  const expected = PropertiesService.getScriptProperties().getProperty('WEBHOOK_SECRET');
-  if (!expected) {
-    throw new Error('WEBHOOK_SECRET script property is missing');
-  }
-
-  return body.secret && String(body.secret) === String(expected);
-}
-
 function upsertOrder(order) {
-  if (!order.order_id) {
-    throw new Error('order.order_id is required');
+  if (!order.ORDERID) {
+    throw new Error('ORDERID is required');
   }
 
   const lock = LockService.getScriptLock();
   lock.waitLock(10000);
 
   try {
-    const sheet = getOrCreateSheet(ORDERS_SHEET_NAME, ORDER_HEADERS);
-    ensureHeaders(sheet, ORDER_HEADERS);
+    const sheet = getOrdersSheet();
+    ensureHeaders(sheet);
 
     const headers = getHeaders(sheet);
-    const orderIdColumn = headers.indexOf('order_id') + 1;
-    const rowIndex = findRowByValue(sheet, orderIdColumn, order.order_id);
+    const orderIdColumn = headers.indexOf('ORDERID') + 1;
+    const rowIndex = findRowByValue(sheet, orderIdColumn, order.ORDERID);
     const row = buildOrderRow(headers, order);
 
     if (rowIndex > 0) {
@@ -118,51 +72,44 @@ function upsertOrder(order) {
   }
 }
 
-function getOrCreateSheet(name, headers) {
+function getOrdersSheet() {
   const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
-  let sheet = spreadsheet.getSheetByName(name);
+  let sheet = spreadsheet.getSheetByName(ORDERS_SHEET_NAME);
 
   if (!sheet) {
-    sheet = spreadsheet.insertSheet(name);
-    sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
-    sheet.setFrozenRows(1);
+    sheet = spreadsheet.getActiveSheet();
+
+    if (!sheet) {
+      sheet = spreadsheet.insertSheet(ORDERS_SHEET_NAME);
+    }
   }
 
   return sheet;
 }
 
-function ensureHeaders(sheet, requiredHeaders) {
-  const currentHeaders = getHeaders(sheet);
-
-  if (currentHeaders.length === 0 || currentHeaders[0] === '') {
-    sheet.getRange(1, 1, 1, requiredHeaders.length).setValues([requiredHeaders]);
-    sheet.setFrozenRows(1);
-    return;
-  }
-
-  const missing = requiredHeaders.filter(function(header) {
-    return currentHeaders.indexOf(header) === -1;
-  });
-
-  if (missing.length > 0) {
-    sheet.getRange(1, currentHeaders.length + 1, 1, missing.length).setValues([missing]);
-  }
+function ensureHeaders(sheet) {
+  sheet.getRange(1, 1, 1, ORDER_HEADERS.length).setValues([ORDER_HEADERS]);
+  sheet.setFrozenRows(1);
 }
 
 function getHeaders(sheet) {
-  const lastColumn = Math.max(sheet.getLastColumn(), 1);
-  return sheet.getRange(1, 1, 1, lastColumn).getValues()[0].map(function(value) {
-    return String(value || '').trim();
-  });
+  return sheet
+    .getRange(1, 1, 1, ORDER_HEADERS.length)
+    .getValues()[0]
+    .map(function(value) {
+      return String(value || '').trim();
+    });
 }
 
 function findRowByValue(sheet, column, value) {
   const lastRow = sheet.getLastRow();
-  if (lastRow < 2) {
+
+  if (lastRow < 2 || column < 1) {
     return -1;
   }
 
   const values = sheet.getRange(2, column, lastRow - 1, 1).getValues();
+
   for (let i = 0; i < values.length; i++) {
     if (String(values[i][0]) === String(value)) {
       return i + 2;
@@ -173,29 +120,27 @@ function findRowByValue(sheet, column, value) {
 }
 
 function buildOrderRow(headers, order) {
-  const rowObject = Object.assign({}, order, {
-    sheet_updated_at: new Date().toISOString()
-  });
+  const rowObject = {
+    'DATE': order.DATE || '',
+    'ORDERID': order.ORDERID || '',
+    'CITY': order.CITY || 'AGADIR',
+    'FULL NAME': order['FULL NAME'] || '',
+    'PHONE NUMBER': order['PHONE NUMBER'] || '',
+    'PRODUCT': order.PRODUCT || '',
+    'SKU': order.SKU || '',
+    'QUANTITY': order.QUANTITY || '',
+    'TOTAL PRICE MAD': order['TOTAL PRICE MAD'] || '',
+    'CURRENCY': order.CURRENCY || 'MAD',
+    'STATUS': ''
+  };
 
   return headers.map(function(header) {
-    const value = rowObject[header];
-
-    if (Array.isArray(value) || (value && typeof value === 'object')) {
-      return JSON.stringify(value);
-    }
-
-    return value == null ? '' : value;
+    return rowObject[header] == null ? '' : rowObject[header];
   });
 }
 
-function jsonResponse(payload, statusCode) {
-  payload.statusCode = statusCode || 200;
-
-  const output = ContentService
+function jsonResponse(payload) {
+  return ContentService
     .createTextOutput(JSON.stringify(payload))
     .setMimeType(ContentService.MimeType.JSON);
-
-  // Apps Script Web Apps do not support setting arbitrary HTTP status codes
-  // in all runtimes, so include statusCode in the JSON for backend handling.
-  return output;
 }

@@ -69,12 +69,9 @@ export function CheckoutPopup() {
       setLastOrderId(order.order_id);
       closeCheckout();
       router.push(`/thank-you?order_id=${order.order_id}`);
-    } catch {
-      // Backend may be offline during dev — still continue to thank-you with a temp ID.
-      const tempId = `dev_${Date.now()}`;
-      setLastOrderId(tempId);
-      closeCheckout();
-      router.push(`/thank-you?order_id=${tempId}`);
+    } catch (error) {
+      console.error("Order creation failed", error);
+      setError("تعذر إرسال الطلب. تأكد من الاتصال أو جرب مرة أخرى بعد لحظات.");
     } finally {
       setSubmitting(false);
     }

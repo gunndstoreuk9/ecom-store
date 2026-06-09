@@ -9,7 +9,7 @@ from app.services.orders import get_order, order_sheet_payload
 
 async def sync_order_to_sheet(order_id: str, db_factory) -> None:
     settings = get_settings()
-    if not settings.sheets_webhook_url or not settings.sheets_webhook_secret:
+    if not settings.sheets_webhook_url:
         _mark_skipped(order_id, db_factory, "Sheets webhook not configured")
         return
 
@@ -19,13 +19,15 @@ async def sync_order_to_sheet(order_id: str, db_factory) -> None:
         if not order:
             return
         payload = {
-            "secret": settings.sheets_webhook_secret,
             "action": "upsert_order",
             "order": order_sheet_payload(order),
         }
         async with httpx.AsyncClient(timeout=10) as client:
             response = await client.post(settings.sheets_webhook_url, json=payload)
             response.raise_for_status()
+        result = response.json()
+        if not result.get("ok"):
+            raise RuntimeError(f"Sheets webhook rejected order: {result}")
         order.sheet_sync_status = "synced"
         order.sheet_last_error = None
         order.sheet_synced_at = datetime.now(timezone.utc)

@@ -31,7 +31,6 @@ DATABASE_URL=postgres://tawazonhealth:tawazonhealth@tawazon_database:5432/tawazo
 FRONTEND_URL=https://tawazonhealth.store
 CORS_ORIGINS=https://tawazonhealth.store,https://www.tawazonhealth.store
 SHEETS_WEBHOOK_URL=<apps-script-webhook-url>
-SHEETS_WEBHOOK_SECRET=<same-secret-in-apps-script>
 ```
 
 The container command runs:

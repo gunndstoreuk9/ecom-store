@@ -124,6 +124,7 @@ function DirectCodOrderForm({ embedded = false }: { embedded?: boolean } = {}) {
   const router = useRouter();
   const [selectedOfferId, setSelectedOfferId] = useState<OfferId>("three");
   const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const selectedOffer = HERO_OFFERS.find((offer) => offer.id === selectedOfferId) ?? HERO_OFFERS[2];
 
   const {
@@ -138,6 +139,7 @@ function DirectCodOrderForm({ embedded = false }: { embedded?: boolean } = {}) {
   const onSubmit = async (data: OrderFormData) => {
     if (submitting) return;
     setSubmitting(true);
+    setSubmitError(null);
     const eventId = generateEventId("order");
 
     try {
@@ -155,10 +157,9 @@ function DirectCodOrderForm({ embedded = false }: { embedded?: boolean } = {}) {
 
       trackLead({ value: selectedOffer.priceMad, eventId });
       router.push(`/thank-you?order_id=${order.order_id}`);
-    } catch {
-      const tempOrderId = `dev_${Date.now()}`;
-      trackLead({ value: selectedOffer.priceMad, eventId });
-      router.push(`/thank-you?order_id=${tempOrderId}`);
+    } catch (error) {
+      console.error("Order creation failed", error);
+      setSubmitError("تعذر إرسال الطلب. تأكد من الاتصال أو جرب مرة أخرى بعد لحظات.");
     } finally {
       setSubmitting(false);
     }
@@ -317,6 +318,11 @@ function DirectCodOrderForm({ embedded = false }: { embedded?: boolean } = {}) {
               >
                 {submitting ? "جاري إرسال الطلب..." : "أكد طلبي الآن — الدفع عند الاستلام ←"}
               </button>
+              {submitError && (
+                <p className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-center text-sm font-bold text-[#B91C1C]">
+                  {submitError}
+                </p>
+              )}
 
               <div className="grid gap-2 text-xs font-bold text-[#667085] sm:grid-cols-3">
                 <span className="flex items-center justify-center gap-1 rounded-full bg-white px-3 py-2">
