@@ -2,6 +2,19 @@
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import {
+  Boxes,
+  Calendar,
+  LayoutDashboard,
+  LogOut,
+  MapPin,
+  Megaphone,
+  Package,
+  RefreshCw,
+  Search,
+  TrendingUp,
+  Users,
+} from "lucide-react";
+import {
   AdminAnalytics,
   AdminOrder,
   AdminOrdersResponse,
@@ -13,44 +26,51 @@ import {
 import { formatMad } from "@/lib/currency";
 
 type Lang = "en" | "ar";
+type TabId = "overview" | "revenue" | "orders" | "customers" | "cities" | "modules";
+type Granularity = "daily" | "weekly" | "monthly";
 
 const ADMIN_KEY_STORAGE = "tawazon_admin_key";
 const LANG_STORAGE = "tawazon_admin_lang";
 
 const ORDER_STATUSES = [
-  { value: "new", en: "New", ar: "جديد" },
-  { value: "awaiting_confirmation", en: "Awaiting Confirmation", ar: "ينتظر التأكيد" },
-  { value: "confirmed", en: "Confirmed", ar: "مؤكد" },
-  { value: "packed", en: "Packed", ar: "مجهز" },
-  { value: "no_answer", en: "No Answer", ar: "لا يجيب" },
-  { value: "cancelled", en: "Cancelled", ar: "ملغي" },
-  { value: "shipped", en: "Shipped", ar: "تم الإرسال" },
-  { value: "delivered", en: "Delivered", ar: "تم التسليم" },
-  { value: "returned", en: "Returned", ar: "مرتجع" },
-  { value: "refused", en: "Refused", ar: "مرفوض" },
+  { value: "new", en: "New", ar: "جديد", color: "bg-sky-50 text-sky-700" },
+  { value: "awaiting_confirmation", en: "Awaiting Confirmation", ar: "ينتظر التأكيد", color: "bg-amber-50 text-amber-700" },
+  { value: "confirmed", en: "Confirmed", ar: "مؤكد", color: "bg-indigo-50 text-indigo-700" },
+  { value: "packed", en: "Packed", ar: "مجهز", color: "bg-purple-50 text-purple-700" },
+  { value: "no_answer", en: "No Answer", ar: "لا يجيب", color: "bg-orange-50 text-orange-700" },
+  { value: "cancelled", en: "Cancelled", ar: "ملغي", color: "bg-rose-50 text-rose-700" },
+  { value: "shipped", en: "Shipped", ar: "تم الإرسال", color: "bg-cyan-50 text-cyan-700" },
+  { value: "delivered", en: "Delivered", ar: "تم التسليم", color: "bg-emerald-50 text-emerald-700" },
+  { value: "returned", en: "Returned", ar: "مرتجع", color: "bg-red-50 text-red-700" },
+  { value: "refused", en: "Refused", ar: "مرفوض", color: "bg-red-50 text-red-700" },
 ] as const;
+
+const STATUS_COLOR = Object.fromEntries(ORDER_STATUSES.map((s) => [s.value, s.color]));
 
 const DATE_FILTERS = [
   { days: 1, en: "Today", ar: "اليوم" },
-  { days: 2, en: "Last 2 Days", ar: "آخر يومين" },
-  { days: 3, en: "Last 3 Days", ar: "آخر 3 أيام" },
-  { days: 4, en: "Last 4 Days", ar: "آخر 4 أيام" },
-  { days: 7, en: "Last 7 Days", ar: "آخر 7 أيام" },
-  { days: 15, en: "Last 15 Days", ar: "آخر 15 يوم" },
-  { days: 30, en: "Last 30 Days", ar: "آخر 30 يوم" },
-  { days: 60, en: "Last 60 Days", ar: "آخر 60 يوم" },
-  { days: 90, en: "Last 90 Days", ar: "آخر 90 يوم" },
-  { days: 180, en: "Last 180 Days", ar: "آخر 180 يوم" },
-  { days: 365, en: "Last 365 Days", ar: "آخر 365 يوم" },
+  { days: 7, en: "7 Days", ar: "7 أيام" },
+  { days: 15, en: "15 Days", ar: "15 يوم" },
+  { days: 30, en: "30 Days", ar: "30 يوم" },
+  { days: 60, en: "60 Days", ar: "60 يوم" },
+  { days: 90, en: "90 Days", ar: "90 يوم" },
+  { days: 180, en: "180 Days", ar: "180 يوم" },
+  { days: 365, en: "365 Days", ar: "365 يوم" },
 ] as const;
 
-const INTEGRATION_NOTE = {
-  en: "Ready for integration",
-  ar: "جاهز للربط",
-};
+const NAV: { id: TabId; en: string; ar: string; Icon: typeof LayoutDashboard }[] = [
+  { id: "overview", en: "Overview", ar: "الرئيسية", Icon: LayoutDashboard },
+  { id: "revenue", en: "Revenue", ar: "المداخيل", Icon: TrendingUp },
+  { id: "orders", en: "Orders", ar: "الطلبات", Icon: Package },
+  { id: "customers", en: "Customers", ar: "العملاء", Icon: Users },
+  { id: "cities", en: "Cities", ar: "المدن", Icon: MapPin },
+  { id: "modules", en: "Modules", ar: "الوحدات", Icon: Boxes },
+];
 
 export default function AdminDashboardPage() {
   const [lang, setLang] = useState<Lang>("ar");
+  const [tab, setTab] = useState<TabId>("overview");
+  const [granularity, setGranularity] = useState<Granularity>("daily");
   const [adminKey, setAdminKey] = useState("");
   const [savedKey, setSavedKey] = useState("");
   const [analytics, setAnalytics] = useState<AdminAnalytics | null>(null);
@@ -59,10 +79,13 @@ export default function AdminDashboardPage() {
   const [sheetFilter, setSheetFilter] = useState("");
   const [query, setQuery] = useState("");
   const [days, setDays] = useState(30);
+  const [showCustom, setShowCustom] = useState(false);
+  const [customStart, setCustomStart] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const isArabic = lang === "ar";
+  const t = (en: string, ar: string) => (isArabic ? ar : en);
   const currentKey = savedKey || adminKey;
   const orders = ordersData?.orders ?? [];
 
@@ -84,10 +107,28 @@ export default function AdminDashboardPage() {
     return map;
   }, [analytics]);
 
-  const maxDailyRevenue = useMemo(
-    () => Math.max(1, ...(analytics?.daily_revenue.map((item) => item.total_mad) ?? [1])),
-    [analytics]
+  const chartData = useMemo(
+    () => bucketRevenue(analytics?.daily_revenue ?? [], granularity),
+    [analytics, granularity]
   );
+  const maxChart = useMemo(() => Math.max(1, ...chartData.map((d) => d.value)), [chartData]);
+
+  const customerStats = useMemo(() => {
+    const byPhone = new Map<string, { orders: number; revenue: number; name: string; city: string | null | undefined }>();
+    orders.forEach((o) => {
+      const prev = byPhone.get(o.phone_e164) ?? { orders: 0, revenue: 0, name: o.customer_name, city: o.city };
+      prev.orders += 1;
+      prev.revenue += o.total_mad;
+      byPhone.set(o.phone_e164, prev);
+    });
+    const unique = byPhone.size;
+    const repeat = [...byPhone.values()].filter((c) => c.orders > 1).length;
+    const top = [...byPhone.entries()]
+      .map(([phone, v]) => ({ phone, ...v }))
+      .sort((a, b) => b.revenue - a.revenue)
+      .slice(0, 8);
+    return { unique, repeat, repeatRate: unique ? Math.round((repeat / unique) * 100) : 0, top };
+  }, [orders]);
 
   useEffect(() => {
     const storedKey = window.localStorage.getItem(ADMIN_KEY_STORAGE) ?? "";
@@ -116,7 +157,7 @@ export default function AdminDashboardPage() {
     try {
       const [analyticsResult, ordersResult] = await Promise.all([
         getAdminAnalytics(key, days),
-        getAdminOrders(key, { limit: 120, status: statusFilter, sheet_sync_status: sheetFilter, q: query }),
+        getAdminOrders(key, { limit: 200, status: statusFilter, sheet_sync_status: sheetFilter, q: query }),
       ]);
       setAnalytics(analyticsResult);
       setOrdersData(ordersResult);
@@ -147,15 +188,22 @@ export default function AdminDashboardPage() {
     setAdminKey("");
   }
 
+  function applyCustomDate(value: string) {
+    setCustomStart(value);
+    if (!value) return;
+    const start = new Date(value).getTime();
+    if (Number.isNaN(start)) return;
+    const diff = Math.ceil((Date.now() - start) / (1000 * 60 * 60 * 24));
+    setDays(Math.min(365, Math.max(1, diff)));
+  }
+
   async function handleStatusChange(order: AdminOrder, nextStatus: string) {
     if (!currentKey || nextStatus === order.status) return;
     setError(null);
     try {
       const updated = await updateAdminOrderStatus(currentKey, order.id, nextStatus);
       setOrdersData((current) =>
-        current
-          ? { ...current, orders: current.orders.map((item) => (item.id === updated.id ? updated : item)) }
-          : current
+        current ? { ...current, orders: current.orders.map((item) => (item.id === updated.id ? updated : item)) } : current
       );
       void loadDashboard(currentKey);
     } catch (err) {
@@ -163,61 +211,20 @@ export default function AdminDashboardPage() {
     }
   }
 
-  const revenueCards = [
-    card("Revenue Today", "مداخيل اليوم", money(periodMap.get("today")?.revenue_mad), ordersNote(periodMap.get("today")?.orders, lang)),
-    card("Revenue Yesterday", "مداخيل البارح", money(periodMap.get("yesterday")?.revenue_mad), ordersNote(periodMap.get("yesterday")?.orders, lang)),
-    card("Revenue Last 7 Days", "مداخيل آخر 7 أيام", money(periodMap.get("last_7_days")?.revenue_mad), ordersNote(periodMap.get("last_7_days")?.orders, lang)),
-    card("Revenue Last 30 Days", "مداخيل آخر 30 يوم", money(periodMap.get("last_30_days")?.revenue_mad), ordersNote(periodMap.get("last_30_days")?.orders, lang)),
-    card("Revenue Last 90 Days", "مداخيل آخر 90 يوم", money(periodMap.get("last_90_days")?.revenue_mad), ordersNote(periodMap.get("last_90_days")?.orders, lang)),
-    card("Revenue This Month", "مداخيل هذا الشهر", money(periodMap.get("this_month")?.revenue_mad), ordersNote(periodMap.get("this_month")?.orders, lang)),
-    card("Revenue Last Month", "مداخيل الشهر الماضي", money(periodMap.get("last_month")?.revenue_mad), ordersNote(periodMap.get("last_month")?.orders, lang)),
-    card("Revenue This Year", "مداخيل هذه السنة", money(periodMap.get("this_year")?.revenue_mad), ordersNote(periodMap.get("this_year")?.orders, lang)),
-    card("Revenue Last Year", "مداخيل السنة الماضية", money(periodMap.get("last_year")?.revenue_mad), ordersNote(periodMap.get("last_year")?.orders, lang)),
-  ];
-
-  const orderCards = [
-    card("Orders Today", "طلبات اليوم", count(periodMap.get("today")?.orders), money(periodMap.get("today")?.revenue_mad)),
-    card("Orders Yesterday", "طلبات البارح", count(periodMap.get("yesterday")?.orders), money(periodMap.get("yesterday")?.revenue_mad)),
-    card("Orders 7D", "طلبات 7 أيام", count(periodMap.get("last_7_days")?.orders), money(periodMap.get("last_7_days")?.revenue_mad)),
-    card("Orders 30D", "طلبات 30 يوم", count(periodMap.get("last_30_days")?.orders), money(periodMap.get("last_30_days")?.revenue_mad)),
-    card("Orders Pending", "طلبات قيد الانتظار", count(statusMap.get("new")?.count), money(statusMap.get("new")?.total_mad)),
-    card("Orders Confirmed", "طلبات مؤكدة", count(statusMap.get("confirmed")?.count), money(statusMap.get("confirmed")?.total_mad)),
-    card("Orders Shipped", "طلبات مرسلة", count(statusMap.get("shipped")?.count), money(statusMap.get("shipped")?.total_mad)),
-    card("Orders Delivered", "طلبات مسلمة", count(statusMap.get("delivered")?.count), money(statusMap.get("delivered")?.total_mad)),
-    card("Orders Returned", "طلبات مرتجعة", count(statusMap.get("returned")?.count), money(statusMap.get("returned")?.total_mad)),
-    card("Orders Cancelled", "طلبات ملغية", count(statusMap.get("cancelled")?.count), money(statusMap.get("cancelled")?.total_mad)),
-  ];
-
-  const deliveryCards = [
-    card("Delivery Rate %", "نسبة التسليم %", percent(rateMap.get("delivery_rate")), "Delivered / Shipped"),
-    card("Return Rate %", "نسبة الراجع %", percent(rateMap.get("return_rate")), "Returned / Shipped"),
-    card("Cancellation Rate %", "نسبة الإلغاء %", percent(rateMap.get("cancellation_rate")), "Cancelled / Orders"),
-    card("Confirmation Rate %", "نسبة التأكيد %", percent(rateMap.get("confirmation_rate")), "Confirmed / Orders"),
-    card("Average Delivery Time", "متوسط مدة التسليم", `${rateMap.get("average_delivery_time") ?? 0} ${isArabic ? "يوم" : "days"}`, INTEGRATION_NOTE[lang]),
-  ];
-
-  const profitCards = [
-    card("Gross Revenue", "إجمالي المداخيل", money(analytics?.total_revenue_mad), isArabic ? "من قاعدة الطلبات" : "From orders DB"),
-    card("Product Cost", "تكلفة المنتج", money(0), INTEGRATION_NOTE[lang]),
-    card("Shipping Cost", "تكلفة الشحن", money(0), INTEGRATION_NOTE[lang]),
-    card("Ads Cost", "تكلفة الإعلانات", money(0), INTEGRATION_NOTE[lang]),
-    card("Net Profit", "صافي الربح", money(analytics?.total_revenue_mad), isArabic ? "قبل إدخال التكاليف" : "Before costs"),
-    card("Profit Margin %", "هامش الربح %", percent(analytics?.total_revenue_mad ? 100 : 0), isArabic ? "تقديري" : "Estimated"),
-  ];
-
   if (!savedKey) {
     return (
-      <section dir={isArabic ? "rtl" : "ltr"} className="min-h-screen bg-[#F5F7FB] px-4 py-10 text-[#102033]">
-        <div className="mx-auto max-w-md rounded-[32px] border border-white bg-white p-6 shadow-2xl shadow-slate-900/10">
-          <div className="mb-5 flex justify-end">
+      <section dir={isArabic ? "rtl" : "ltr"} className="flex min-h-screen items-center justify-center bg-gradient-to-br from-[#0B1724] via-[#102033] to-[#1E4A8C] px-4 py-10 text-[#102033]">
+        <div className="w-full max-w-md rounded-[32px] border border-white/20 bg-white p-7 shadow-2xl">
+          <div className="mb-6 flex items-center justify-between">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#1E4A8C] text-lg font-black text-white">ت</div>
             <LanguageToggle lang={lang} setLang={setLang} />
           </div>
-          <p className="text-sm font-black text-[#1E4A8C]">Tawazon Admin</p>
-          <h1 className="mt-2 text-3xl font-black">{isArabic ? "لوحة تحكم المتجر" : "Store Admin Dashboard"}</h1>
+          <h1 className="text-3xl font-black">{t("Store Admin", "لوحة تحكم المتجر")}</h1>
           <p className="mt-3 text-sm font-semibold leading-7 text-[#667085]">
-            {isArabic
-              ? "دخل مفتاح الإدارة باش تشوف الطلبات، المداخيل، التحليلات، ونسخة CEO كاملة."
-              : "Enter the admin key to access orders, revenue, analytics, and the CEO dashboard."}
+            {t(
+              "Enter the admin key to access orders, revenue, analytics, and the CEO dashboard.",
+              "دخل مفتاح الإدارة باش تشوف الطلبات، المداخيل، التحليلات، ونسخة CEO كاملة."
+            )}
           </p>
           <form onSubmit={handleLogin} className="mt-6 space-y-4">
             <input
@@ -229,7 +236,7 @@ export default function AdminDashboardPage() {
               dir="ltr"
             />
             <button className="w-full rounded-full bg-[#1E4A8C] px-5 py-3 text-sm font-black text-white transition hover:bg-[#173B70]">
-              {isArabic ? "دخول للوحة التحكم" : "Open Dashboard"}
+              {t("Open Dashboard", "دخول للوحة التحكم")}
             </button>
           </form>
         </div>
@@ -237,132 +244,321 @@ export default function AdminDashboardPage() {
     );
   }
 
+  const overviewKpis = [
+    { label: t("Total Revenue", "إجمالي المداخيل"), value: money(analytics?.total_revenue_mad), note: `${count(analytics?.total_orders)} ${t("orders", "طلب")}`, tone: "blue" as const },
+    { label: t("Avg Order Value", "متوسط الطلب"), value: money(analytics?.average_order_value_mad), note: "AOV", tone: "blue" as const },
+    { label: t("Today Revenue", "مداخيل اليوم"), value: money(analytics?.today_revenue_mad), note: `${count(analytics?.today_orders)} ${t("orders", "طلب")}`, tone: "blue" as const },
+    { label: t("Delivered", "المسلّمة"), value: count(statusMap.get("delivered")?.count), note: percent(rateMap.get("delivery_rate")), tone: "green" as const },
+    { label: t("Delivery Rate", "نسبة التسليم"), value: percent(rateMap.get("delivery_rate")), note: t("Delivered / Shipped", "مسلّم / مرسل"), tone: "green" as const },
+    { label: t("Confirmation Rate", "نسبة التأكيد"), value: percent(rateMap.get("confirmation_rate")), note: t("Confirmed / Orders", "مؤكد / الطلبات"), tone: "blue" as const },
+    { label: t("Return Rate", "نسبة الراجع"), value: percent(rateMap.get("return_rate")), note: t("Returned / Shipped", "راجع / مرسل"), tone: "red" as const },
+    { label: t("Sheet Issues", "مشاكل Google Sheet"), value: count(analytics?.failed_sheet_sync), note: `${count(analytics?.pending_sheet_sync)} pending`, tone: (analytics?.failed_sheet_sync ? "red" : "green") as "red" | "green" },
+  ];
+
   return (
     <section dir={isArabic ? "rtl" : "ltr"} className="min-h-screen bg-[#F5F7FB] text-[#102033]">
-      <div className="sticky top-0 z-30 border-b border-gray-200 bg-white/95 backdrop-blur">
-        <div className="mx-auto flex max-w-[1440px] flex-col gap-4 px-4 py-5 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:px-8">
-          <div>
-            <p className="text-sm font-black text-[#1E4A8C]">Tawazon Health Admin</p>
-            <h1 className="text-3xl font-black">{isArabic ? "CEO Master Dashboard" : "CEO Master Dashboard"}</h1>
-            <p className="mt-1 text-sm font-bold text-[#667085]">
-              {isArabic ? "نسخة عامة بالعربية والإنجليزية لإدارة متجر COD" : "Bilingual general version for COD ecommerce operations"}
-            </p>
+      <header className="sticky top-0 z-40 bg-gradient-to-l from-[#0B1724] to-[#1E4A8C] text-white shadow-lg">
+        <div className="mx-auto flex max-w-[1480px] flex-col gap-4 px-4 py-4 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:px-8">
+          <div className="flex items-center gap-3">
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/15 text-lg font-black">ت</div>
+            <div>
+              <p className="text-xs font-black uppercase tracking-wide text-white/70">Tawazon Health</p>
+              <h1 className="text-xl font-black">{t("CEO Dashboard", "لوحة تحكم المدير")}</h1>
+            </div>
           </div>
-          <div className="flex flex-wrap gap-3">
-            <LanguageToggle lang={lang} setLang={setLang} />
-            <button onClick={() => void loadDashboard()} className="rounded-full bg-[#1E4A8C] px-5 py-2 text-sm font-black text-white">
-              {loading ? (isArabic ? "كيتم التحديث..." : "Refreshing...") : isArabic ? "تحديث البيانات" : "Refresh Data"}
+          <div className="flex flex-wrap items-center gap-2">
+            <LanguageToggle lang={lang} setLang={setLang} dark />
+            <button
+              onClick={() => void loadDashboard()}
+              className="flex items-center gap-2 rounded-full bg-white/15 px-4 py-2 text-sm font-black text-white transition hover:bg-white/25"
+            >
+              <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+              {loading ? t("Refreshing", "كيتحدث") : t("Refresh", "تحديث")}
             </button>
-            <button onClick={handleLogout} className="rounded-full border border-gray-200 bg-white px-5 py-2 text-sm font-black text-[#667085]">
-              {isArabic ? "خروج" : "Logout"}
+            <button onClick={handleLogout} className="flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-sm font-black text-white transition hover:bg-white/20">
+              <LogOut className="h-4 w-4" />
+              {t("Logout", "خروج")}
             </button>
           </div>
         </div>
+      </header>
+
+      <nav className="sticky top-[72px] z-30 border-b border-gray-200 bg-white/95 backdrop-blur">
+        <div className="mx-auto flex max-w-[1480px] gap-1 overflow-x-auto px-4 sm:px-6 lg:px-8">
+          {NAV.map(({ id, en, ar, Icon }) => (
+            <button
+              key={id}
+              onClick={() => setTab(id)}
+              className={`flex shrink-0 items-center gap-2 border-b-2 px-4 py-4 text-sm font-black transition ${
+                tab === id ? "border-[#1E4A8C] text-[#1E4A8C]" : "border-transparent text-[#667085] hover:text-[#102033]"
+              }`}
+            >
+              <Icon className="h-4 w-4" />
+              {t(en, ar)}
+            </button>
+          ))}
+        </div>
+      </nav>
+
+      <div className="border-b border-gray-200 bg-white">
+        <div className="mx-auto flex max-w-[1480px] flex-wrap items-center gap-2 px-4 py-3 sm:px-6 lg:px-8">
+          <span className="flex items-center gap-2 text-xs font-black text-[#667085]">
+            <Calendar className="h-4 w-4" />
+            {t("Period", "الفترة")}:
+          </span>
+          {DATE_FILTERS.map((item) => (
+            <button
+              key={item.days}
+              onClick={() => {
+                setShowCustom(false);
+                setDays(item.days);
+              }}
+              className={`rounded-full px-3 py-1.5 text-xs font-black transition ${
+                days === item.days && !showCustom ? "bg-[#1E4A8C] text-white" : "bg-[#F5F7FB] text-[#667085] hover:bg-[#EEF5FF]"
+              }`}
+            >
+              {t(item.en, item.ar)}
+            </button>
+          ))}
+          <button
+            onClick={() => setShowCustom((v) => !v)}
+            className={`rounded-full px-3 py-1.5 text-xs font-black transition ${
+              showCustom ? "bg-[#1E4A8C] text-white" : "bg-[#F5F7FB] text-[#667085] hover:bg-[#EEF5FF]"
+            }`}
+          >
+            {t("Custom Date", "تاريخ مخصص")}
+          </button>
+          {showCustom ? (
+            <input
+              type="date"
+              value={customStart}
+              max={new Date().toISOString().slice(0, 10)}
+              onChange={(event) => applyCustomDate(event.target.value)}
+              className="rounded-full border border-gray-200 px-3 py-1.5 text-xs font-bold outline-none focus:border-[#1E4A8C]"
+            />
+          ) : null}
+          <span className="ms-auto rounded-full bg-[#EEF5FF] px-3 py-1.5 text-xs font-black text-[#1E4A8C]">
+            {t("Window", "النافذة")}: {analytics?.days ?? days} {t("days", "يوم")}
+          </span>
+        </div>
       </div>
 
-      <div className="mx-auto max-w-[1440px] space-y-8 px-4 py-6 sm:px-6 lg:px-8">
+      <main className="mx-auto max-w-[1480px] space-y-6 px-4 py-6 sm:px-6 lg:px-8">
         {error ? <div className="rounded-3xl border border-red-100 bg-red-50 p-4 text-sm font-bold text-red-700">{error}</div> : null}
 
-        <DashboardSection title="Date Filters" titleAr="فلاتر التاريخ" subtitle="Choose the active reporting window" subtitleAr="اختار الفترة اللي بغيتي تشوف عليها الأرقام" lang={lang}>
-          <div className="flex flex-wrap gap-2">
-            {DATE_FILTERS.map((item) => (
-              <button
-                key={item.days}
-                onClick={() => setDays(item.days)}
-                className={`rounded-full px-4 py-2 text-xs font-black transition ${
-                  days === item.days ? "bg-[#1E4A8C] text-white" : "bg-white text-[#667085] ring-1 ring-gray-200"
-                }`}
-              >
-                {isArabic ? item.ar : item.en}
-              </button>
-            ))}
-            <button className="rounded-full bg-white px-4 py-2 text-xs font-black text-[#667085] ring-1 ring-dashed ring-gray-300">
-              {isArabic ? "تاريخ مخصص" : "Custom Date"}
-            </button>
-          </div>
-        </DashboardSection>
-
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <KpiCard label={isArabic ? "Revenue" : "Revenue"} value={money(analytics?.total_revenue_mad)} note={`${count(analytics?.total_orders)} ${isArabic ? "طلب" : "orders"}`} />
-          <KpiCard label={isArabic ? "Orders" : "Orders"} value={count(analytics?.total_orders)} note={isArabic ? "إجمالي الطلبات" : "Total orders"} />
-          <KpiCard label={isArabic ? "Delivered" : "Delivered"} value={count(statusMap.get("delivered")?.count)} note={percent(rateMap.get("delivery_rate"))} tone="green" />
-          <KpiCard label={isArabic ? "Profit" : "Profit"} value={money(analytics?.total_revenue_mad)} note={isArabic ? "قبل التكاليف" : "Before costs"} tone="blue" />
-        </div>
-
-        <DashboardSection title="Home Dashboard - CEO View" titleAr="الرئيسية - نظرة CEO" subtitle="The most important ecommerce and COD KPIs" subtitleAr="أهم مؤشرات التجارة و COD" lang={lang}>
-          <KpiGroup title="Sales" titleAr="المبيعات" cards={revenueCards} lang={lang} />
-          <KpiGroup title="Orders" titleAr="الطلبات" cards={orderCards} lang={lang} />
-          <KpiGroup title="Delivery" titleAr="التوصيل" cards={deliveryCards} lang={lang} />
-          <KpiGroup title="Profit" titleAr="الربح" cards={profitCards} lang={lang} />
-        </DashboardSection>
-
-        <div className="grid gap-6 xl:grid-cols-[1.35fr_0.65fr]">
-          <DashboardSection title="Revenue Section" titleAr="قسم المداخيل" subtitle="Hourly, daily, weekly, and monthly reporting foundation" subtitleAr="أساس تتبع المداخيل بالساعة، اليوم، الأسبوع، والشهر" lang={lang}>
-            <div className="flex flex-wrap gap-2">
-              {["Hourly", "Daily", "Weekly", "Monthly"].map((item) => (
-                <span key={item} className="rounded-full bg-[#EEF5FF] px-3 py-1 text-xs font-black text-[#1E4A8C]">
-                  {translateChartMode(item, lang)}
-                </span>
+        {tab === "overview" ? (
+          <>
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+              {overviewKpis.map((kpi) => (
+                <KpiCard key={kpi.label} label={kpi.label} value={kpi.value} note={kpi.note} tone={kpi.tone} />
               ))}
             </div>
-            <div className="mt-6 flex h-64 items-end gap-2 overflow-x-auto rounded-3xl bg-[#F8FAFC] p-4">
-              {(analytics?.daily_revenue ?? []).map((item) => (
-                <div key={item.date} className="flex min-w-12 flex-1 flex-col items-center gap-2">
-                  <div
-                    className="w-full rounded-t-2xl bg-gradient-to-t from-[#1E4A8C] to-[#60A5FA]"
-                    style={{ height: `${Math.max(8, (item.total_mad / maxDailyRevenue) * 190)}px` }}
-                    title={`${item.date}: ${formatMad(item.total_mad)}`}
+
+            <div className="grid gap-6 xl:grid-cols-[1.4fr_0.6fr]">
+              <Card title={t("Revenue Trend", "تطور المداخيل")} subtitle={t("Performance over the selected window", "الأداء خلال الفترة المختارة")}>
+                <GranularityToggle value={granularity} setValue={setGranularity} lang={lang} />
+                <BarChart data={chartData} max={maxChart} emptyText={t("Not enough data yet.", "مازال ماكايناش بيانات كافية.")} />
+              </Card>
+
+              <Card title={t("Order Funnel", "مسار الطلبات")} subtitle={t("From order to paid", "من الطلب حتى الدفع")}>
+                <div className="space-y-2">
+                  {(analytics?.order_funnel ?? []).map((step, index) => (
+                    <div key={step.key}>
+                      <FunnelStep label={translateFunnel(step.label, lang)} count={step.count} rate={step.rate} />
+                      {index < (analytics?.order_funnel.length ?? 0) - 1 ? (
+                        <div className="py-1 text-center text-xs text-[#9AA7B8]">↓</div>
+                      ) : null}
+                    </div>
+                  ))}
+                  {!analytics?.order_funnel.length ? <EmptyState text={t("No funnel data yet.", "مازال ماكايناش بيانات.")} /> : null}
+                </div>
+              </Card>
+            </div>
+
+            <Card title={t("Status Breakdown", "توزيع الحالات")} subtitle={t("Live order statuses in the period", "حالات الطلبات الحية فالفترة")}>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+                {ORDER_STATUSES.map((s) => (
+                  <StatusTile key={s.value} label={t(s.en, s.ar)} count={statusMap.get(s.value)?.count ?? 0} revenue={statusMap.get(s.value)?.total_mad ?? 0} color={s.color} />
+                ))}
+              </div>
+            </Card>
+          </>
+        ) : null}
+
+        {tab === "revenue" ? (
+          <>
+            <Card title={t("Revenue Trend", "تطور المداخيل")} subtitle={t("Daily, weekly, and monthly views", "عرض يومي، أسبوعي، وشهري")}>
+              <GranularityToggle value={granularity} setValue={setGranularity} lang={lang} />
+              <BarChart data={chartData} max={maxChart} emptyText={t("Not enough data yet.", "مازال ماكايناش بيانات كافية.")} />
+            </Card>
+
+            <Card title={t("Revenue by Period", "المداخيل حسب الفترة")} subtitle={t("Compare key time windows", "قارن أهم الفترات")}>
+              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                {[
+                  { key: "today", en: "Today", ar: "اليوم" },
+                  { key: "yesterday", en: "Yesterday", ar: "البارح" },
+                  { key: "last_7_days", en: "Last 7 Days", ar: "آخر 7 أيام" },
+                  { key: "last_30_days", en: "Last 30 Days", ar: "آخر 30 يوم" },
+                  { key: "this_month", en: "This Month", ar: "هذا الشهر" },
+                  { key: "last_month", en: "Last Month", ar: "الشهر الماضي" },
+                  { key: "this_year", en: "This Year", ar: "هذه السنة" },
+                  { key: "last_year", en: "Last Year", ar: "السنة الماضية" },
+                ].map((p) => (
+                  <KpiCard
+                    key={p.key}
+                    label={t(p.en, p.ar)}
+                    value={money(periodMap.get(p.key)?.revenue_mad)}
+                    note={`${count(periodMap.get(p.key)?.orders)} ${t("orders", "طلب")}`}
                   />
-                  <span className="text-[10px] font-bold text-[#667085]">{item.date.slice(5)}</span>
-                </div>
-              ))}
-              {!analytics?.daily_revenue.length ? <EmptyState text={isArabic ? "مازال ماكايناش بيانات كافية للرسم." : "Not enough data for this chart yet."} /> : null}
-            </div>
-            <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-              <CompareCard label={isArabic ? "اليوم vs البارح" : "Today vs Yesterday"} left={money(periodMap.get("today")?.revenue_mad)} right={money(periodMap.get("yesterday")?.revenue_mad)} />
-              <CompareCard label={isArabic ? "هذا الأسبوع vs الماضي" : "This Week vs Last Week"} left={money(periodMap.get("last_7_days")?.revenue_mad)} right={INTEGRATION_NOTE[lang]} />
-              <CompareCard label={isArabic ? "هذا الشهر vs الماضي" : "This Month vs Last Month"} left={money(periodMap.get("this_month")?.revenue_mad)} right={money(periodMap.get("last_month")?.revenue_mad)} />
-              <CompareCard label={isArabic ? "هذه السنة vs الماضية" : "This Year vs Last Year"} left={money(periodMap.get("this_year")?.revenue_mad)} right={money(periodMap.get("last_year")?.revenue_mad)} />
-            </div>
-          </DashboardSection>
+                ))}
+              </div>
+            </Card>
 
-          <DashboardSection title="Orders Section" titleAr="قسم الطلبات" subtitle="Status breakdown and order funnel" subtitleAr="توزيع الحالات و funnel ديال الطلبات" lang={lang}>
+            <Card title={t("Comparisons", "المقارنات")} subtitle={t("Period over period", "فترة مقابل فترة")}>
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                <CompareCard label={t("Today vs Yesterday", "اليوم vs البارح")} left={money(periodMap.get("today")?.revenue_mad)} right={money(periodMap.get("yesterday")?.revenue_mad)} />
+                <CompareCard label={t("7d vs 30d", "7 أيام vs 30 يوم")} left={money(periodMap.get("last_7_days")?.revenue_mad)} right={money(periodMap.get("last_30_days")?.revenue_mad)} />
+                <CompareCard label={t("This vs Last Month", "هذا vs الشهر الماضي")} left={money(periodMap.get("this_month")?.revenue_mad)} right={money(periodMap.get("last_month")?.revenue_mad)} />
+                <CompareCard label={t("This vs Last Year", "هذه vs السنة الماضية")} left={money(periodMap.get("this_year")?.revenue_mad)} right={money(periodMap.get("last_year")?.revenue_mad)} />
+              </div>
+            </Card>
+          </>
+        ) : null}
+
+        {tab === "orders" ? (
+          <Card title={t("Orders Control Center", "مركز التحكم في الطلبات")} subtitle={t("Search, filter, and update order status", "بحث، فلترة، وتغيير حالة الطلبات")}>
+            <div className="mb-5 grid gap-3 md:grid-cols-[1fr_180px_180px_auto]">
+              <div className="relative">
+                <Search className="absolute top-1/2 h-4 w-4 -translate-y-1/2 text-[#9AA7B8] ltr:left-4 rtl:right-4" />
+                <input
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") void loadDashboard();
+                  }}
+                  placeholder={t("Search name, phone, city, order #", "بحث بالاسم، الهاتف، المدينة، رقم الطلب")}
+                  className="w-full rounded-2xl border border-gray-200 py-3 text-sm font-bold outline-none focus:border-[#1E4A8C] ltr:pl-11 ltr:pr-4 rtl:pr-11 rtl:pl-4"
+                />
+              </div>
+              <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} className="rounded-2xl border border-gray-200 px-4 py-3 text-sm font-bold">
+                <option value="">{t("All statuses", "كل الحالات")}</option>
+                {ORDER_STATUSES.map((item) => (
+                  <option key={item.value} value={item.value}>
+                    {t(item.en, item.ar)}
+                  </option>
+                ))}
+              </select>
+              <select value={sheetFilter} onChange={(event) => setSheetFilter(event.target.value)} className="rounded-2xl border border-gray-200 px-4 py-3 text-sm font-bold">
+                <option value="">{t("All Sheet Sync", "كل Google Sheet")}</option>
+                <option value="pending">pending</option>
+                <option value="synced">synced</option>
+                <option value="failed">failed</option>
+                <option value="skipped">skipped</option>
+              </select>
+              <button onClick={() => void loadDashboard()} className="rounded-2xl bg-[#102033] px-5 py-3 text-sm font-black text-white transition hover:bg-[#1E4A8C]">
+                {t("Apply", "تطبيق")}
+              </button>
+            </div>
+
+            <div className="mb-4 flex flex-wrap gap-2 text-xs font-black text-[#667085]">
+              <span className="rounded-full bg-[#F5F7FB] px-3 py-1.5">{t("Showing", "ظاهر")}: {orders.length}</span>
+              <span className="rounded-full bg-[#F5F7FB] px-3 py-1.5">{t("Total", "الإجمالي")}: {ordersData?.total ?? 0}</span>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[1000px] border-separate border-spacing-y-2 text-sm">
+                <thead>
+                  <tr className="text-xs font-black text-[#667085]">
+                    <th className="px-3 py-2 text-start">{t("Order", "الطلب")}</th>
+                    <th className="px-3 py-2 text-start">{t("Customer", "العميل")}</th>
+                    <th className="px-3 py-2 text-start">{t("Phone", "الهاتف")}</th>
+                    <th className="px-3 py-2 text-start">{t("City", "المدينة")}</th>
+                    <th className="px-3 py-2 text-start">{t("Qty", "الكمية")}</th>
+                    <th className="px-3 py-2 text-start">{t("Revenue", "المبلغ")}</th>
+                    <th className="px-3 py-2 text-start">Sheet</th>
+                    <th className="px-3 py-2 text-start">{t("Status", "الحالة")}</th>
+                    <th className="px-3 py-2 text-start">{t("Date", "التاريخ")}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {orders.map((order) => (
+                    <OrderRow key={order.id} lang={lang} order={order} onStatusChange={handleStatusChange} />
+                  ))}
+                </tbody>
+              </table>
+              {!orders.length ? <EmptyState text={t("No orders match these filters.", "ماكاين حتى طلب مطابق للفلاتر.")} /> : null}
+            </div>
+          </Card>
+        ) : null}
+
+        {tab === "customers" ? (
+          <>
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+              <KpiCard label={t("Unique Customers", "عملاء فريدون")} value={count(customerStats.unique)} note={t("In current orders", "فالطلبات الحالية")} />
+              <KpiCard label={t("Returning", "عملاء راجعون")} value={count(customerStats.repeat)} note={percent(customerStats.repeatRate)} tone="green" />
+              <KpiCard label={t("Repeat Rate", "نسبة التكرار")} value={percent(customerStats.repeatRate)} note={t("Repeat / Unique", "راجع / فريد")} />
+              <KpiCard label={t("Avg Order Value", "متوسط الطلب")} value={money(analytics?.average_order_value_mad)} note="AOV" />
+            </div>
+            <Card title={t("Top Customers", "أفضل العملاء")} subtitle={t("By revenue in current orders", "حسب المداخيل فالطلبات الحالية")}>
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[640px] border-separate border-spacing-y-2 text-sm">
+                  <thead>
+                    <tr className="text-xs font-black text-[#667085]">
+                      <th className="px-3 py-2 text-start">{t("Customer", "العميل")}</th>
+                      <th className="px-3 py-2 text-start">{t("Phone", "الهاتف")}</th>
+                      <th className="px-3 py-2 text-start">{t("City", "المدينة")}</th>
+                      <th className="px-3 py-2 text-start">{t("Orders", "الطلبات")}</th>
+                      <th className="px-3 py-2 text-start">{t("Revenue", "المداخيل")}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {customerStats.top.map((c) => (
+                      <tr key={c.phone} className="bg-white shadow-sm">
+                        <td className="px-3 py-3 font-black">{c.name}</td>
+                        <td className="px-3 py-3 font-mono text-xs" dir="ltr">{c.phone}</td>
+                        <td className="px-3 py-3">{c.city || t("Unknown", "غير محددة")}</td>
+                        <td className="px-3 py-3 font-black">{c.orders}</td>
+                        <td className="px-3 py-3 font-black text-[#1E4A8C]">{formatMad(c.revenue)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {!customerStats.top.length ? <EmptyState text={t("No customers yet.", "مازال ماكايناش عملاء.")} /> : null}
+              </div>
+            </Card>
+          </>
+        ) : null}
+
+        {tab === "cities" ? (
+          <Card title={t("Top Cities", "أفضل المدن")} subtitle={t("Revenue and orders by city", "المداخيل والطلبات حسب المدينة")}>
             <div className="space-y-3">
-              {ORDER_STATUSES.map((item) => (
-                <MetricRow key={item.value} label={isArabic ? item.ar : item.en} value={`${statusMap.get(item.value)?.count ?? 0}`} sub={money(statusMap.get(item.value)?.total_mad)} />
-              ))}
+              {(analytics?.top_cities ?? []).map((cityRow) => {
+                const maxCity = Math.max(1, ...(analytics?.top_cities.map((c) => c.total_mad) ?? [1]));
+                return (
+                  <div key={cityRow.city} className="rounded-2xl bg-[#F8FAFC] p-4">
+                    <div className="mb-2 flex items-center justify-between gap-3">
+                      <span className="font-black">{cityRow.city}</span>
+                      <span className="text-sm font-black text-[#1E4A8C]">{formatMad(cityRow.total_mad)}</span>
+                    </div>
+                    <div className="h-2 w-full overflow-hidden rounded-full bg-gray-200">
+                      <div className="h-full rounded-full bg-gradient-to-l from-[#1E4A8C] to-[#60A5FA]" style={{ width: `${Math.max(4, (cityRow.total_mad / maxCity) * 100)}%` }} />
+                    </div>
+                    <p className="mt-2 text-xs font-bold text-[#667085]">{cityRow.orders} {t("orders", "طلب")}</p>
+                  </div>
+                );
+              })}
+              {!analytics?.top_cities.length ? <EmptyState text={t("No city data yet.", "مازال ماكايناش بيانات المدن.")} /> : null}
             </div>
-            <div className="mt-6 space-y-3 rounded-3xl bg-[#F8FAFC] p-4">
-              {(analytics?.order_funnel ?? []).map((step, index) => (
-                <div key={step.key}>
-                  <MetricRow label={translateFunnel(step.label, lang)} value={`${step.count}`} sub={`${step.rate}%`} />
-                  {index < (analytics?.order_funnel.length ?? 0) - 1 ? <div className="py-1 text-center text-[#1E4A8C]">↓</div> : null}
-                </div>
-              ))}
-            </div>
-          </DashboardSection>
-        </div>
+          </Card>
+        ) : null}
 
-        <EnterpriseGrid lang={lang} analytics={analytics} statusMap={statusMap} />
-
-        <OrdersControl
-          lang={lang}
-          orders={orders}
-          query={query}
-          setQuery={setQuery}
-          statusFilter={statusFilter}
-          setStatusFilter={setStatusFilter}
-          sheetFilter={sheetFilter}
-          setSheetFilter={setSheetFilter}
-          loadDashboard={() => void loadDashboard()}
-          onStatusChange={handleStatusChange}
-        />
-      </div>
+        {tab === "modules" ? <ModulesGrid lang={lang} analytics={analytics} statusMap={statusMap} /> : null}
+      </main>
     </section>
   );
 }
 
-function EnterpriseGrid({
+function ModulesGrid({
   lang,
   analytics,
   statusMap,
@@ -371,216 +567,203 @@ function EnterpriseGrid({
   analytics: AdminAnalytics | null;
   statusMap: Map<string, { count: number; total_mad: number }>;
 }) {
-  const isArabic = lang === "ar";
-  const blocks = [
+  const t = (en: string, ar: string) => (lang === "ar" ? ar : en);
+  const delivered = statusMap.get("delivered")?.count ?? 0;
+  const returned = statusMap.get("returned")?.count ?? 0;
+
+  const modules = [
     {
-      title: "Ads Dashboard",
-      titleAr: "لوحة الإعلانات",
-      items: ["Spend", "Revenue", "ROAS", "CPA", "CPM", "CPC", "CTR", "Top Campaigns"],
-      itemsAr: ["الإنفاق", "المداخيل", "ROAS", "CPA", "CPM", "CPC", "CTR", "أفضل الحملات"],
+      Icon: Megaphone,
+      title: t("Ads Dashboard", "لوحة الإعلانات"),
+      desc: t("Meta, TikTok & Google spend, ROAS, CPA, CPM, CPC, CTR.", "إنفاق Meta و TikTok و Google، ROAS، CPA، CPM، CPC، CTR."),
+      connected: false,
+      metrics: [
+        { label: t("Revenue", "المداخيل"), value: money(analytics?.total_revenue_mad) },
+        { label: "Spend", value: "—" },
+        { label: "ROAS", value: "—" },
+      ],
     },
     {
-      title: "Products Dashboard",
-      titleAr: "لوحة المنتجات",
-      items: ["Best Sellers", "Top Product Today", "Top Product 7 Days", "Top Product 30 Days", "Revenue", "Orders", "Delivered", "Return Rate", "Profit"],
-      itemsAr: ["الأكثر مبيعاً", "أفضل منتج اليوم", "أفضل منتج 7 أيام", "أفضل منتج 30 يوم", "المداخيل", "الطلبات", "المسلم", "نسبة الراجع", "الربح"],
+      Icon: Package,
+      title: t("Products Dashboard", "لوحة المنتجات"),
+      desc: t("Best sellers, revenue, delivered, return rate, profit.", "الأكثر مبيعاً، المداخيل، المسلّم، نسبة الراجع، الربح."),
+      connected: true,
+      metrics: [
+        { label: t("Top Product", "أفضل منتج"), value: "Blood Sugar Complex" },
+        { label: t("Orders", "الطلبات"), value: count(analytics?.total_orders) },
+        { label: t("Delivered", "المسلّم"), value: count(delivered) },
+      ],
     },
     {
-      title: "Customers Dashboard",
-      titleAr: "لوحة العملاء",
-      items: ["New Customers", "Returning Customers", "LTV", "AOV", "Repeat Rate", "Total Orders"],
-      itemsAr: ["عملاء جدد", "عملاء راجعين", "LTV", "AOV", "نسبة التكرار", "إجمالي الطلبات"],
+      Icon: Users,
+      title: t("Customers Dashboard", "لوحة العملاء"),
+      desc: t("New & returning customers, LTV, AOV, repeat rate.", "عملاء جدد وراجعون، LTV، AOV، نسبة التكرار."),
+      connected: true,
+      metrics: [
+        { label: "AOV", value: money(analytics?.average_order_value_mad) },
+        { label: t("Total Orders", "إجمالي الطلبات"), value: count(analytics?.total_orders) },
+        { label: "LTV", value: "—" },
+      ],
     },
     {
-      title: "Shipping Dashboard",
-      titleAr: "لوحة الشحن",
-      items: ["Amana", "Ozon", "Express Relais", "Chrono Diali", "Orders", "Delivered", "Returned", "Delivery Rate", "Avg Delivery Time", "Shipping Cost"],
-      itemsAr: ["أمانة", "أوزون", "Express Relais", "Chrono Diali", "الطلبات", "المسلم", "الراجع", "نسبة التسليم", "متوسط التسليم", "تكلفة الشحن"],
+      Icon: TrendingUp,
+      title: t("Shipping Dashboard", "لوحة الشحن"),
+      desc: t("Amana, Ozon, Express Relais delivery rate & cost.", "أمانة، أوزون، Express Relais نسبة التسليم والتكلفة."),
+      connected: false,
+      metrics: [
+        { label: t("Delivered", "المسلّم"), value: count(delivered) },
+        { label: t("Returned", "الراجع"), value: count(returned) },
+        { label: t("Shipping Cost", "تكلفة الشحن"), value: "—" },
+      ],
     },
     {
-      title: "Call Center Dashboard",
-      titleAr: "لوحة مركز الاتصال",
-      items: ["Agent Name", "Calls Today", "Confirmed", "Rejected", "Confirmation Rate", "Revenue Generated"],
-      itemsAr: ["اسم العامل", "مكالمات اليوم", "مؤكد", "مرفوض", "نسبة التأكيد", "المداخيل المحققة"],
+      Icon: Users,
+      title: t("Call Center", "مركز الاتصال"),
+      desc: t("Agents, calls, confirmation rate, revenue generated.", "العملاء، المكالمات، نسبة التأكيد، المداخيل المحققة."),
+      connected: false,
+      metrics: [
+        { label: t("Confirmed", "مؤكد"), value: count(statusMap.get("confirmed")?.count) },
+        { label: t("No Answer", "لا يجيب"), value: count(statusMap.get("no_answer")?.count) },
+        { label: t("Agents", "العملاء"), value: "—" },
+      ],
     },
     {
-      title: "Stock Dashboard",
-      titleAr: "لوحة المخزون",
-      items: ["Total Products", "Active Products", "Low Stock", "Out Of Stock", "SKU", "Current Stock", "Reserved", "Available", "Sold", "Profit"],
-      itemsAr: ["إجمالي المنتجات", "منتجات نشطة", "مخزون منخفض", "نفد المخزون", "SKU", "المخزون الحالي", "محجوز", "متاح", "مباع", "الربح"],
+      Icon: Boxes,
+      title: t("Stock Dashboard", "لوحة المخزون"),
+      desc: t("Inventory, low stock, reserved, available, sold.", "المخزون، منخفض، محجوز، متاح، مباع."),
+      connected: false,
+      metrics: [
+        { label: t("Sold", "مباع"), value: count(delivered) },
+        { label: t("Low Stock", "مخزون منخفض"), value: "—" },
+        { label: t("Out Of Stock", "نفد"), value: "—" },
+      ],
     },
     {
-      title: "Finance Dashboard",
-      titleAr: "لوحة المالية",
-      items: ["Cash Flow", "Revenue", "Expenses", "Profit", "Ads", "Salaries", "Shipping", "Product Cost", "Software", "Misc"],
-      itemsAr: ["التدفق النقدي", "المداخيل", "المصاريف", "الربح", "الإعلانات", "الأجور", "الشحن", "تكلفة المنتج", "البرامج", "متفرقات"],
+      Icon: TrendingUp,
+      title: t("Finance Dashboard", "لوحة المالية"),
+      desc: t("Cash flow, expenses, profit, salaries, software.", "التدفق النقدي، المصاريف، الربح، الأجور، البرامج."),
+      connected: false,
+      metrics: [
+        { label: t("Revenue", "المداخيل"), value: money(analytics?.total_revenue_mad) },
+        { label: t("Expenses", "المصاريف"), value: "—" },
+        { label: t("Net Profit", "صافي الربح"), value: "—" },
+      ],
     },
     {
-      title: "Geo Dashboard",
-      titleAr: "لوحة المدن",
-      items: ["Morocco Map", "Revenue By City", "Casablanca", "Rabat", "Agadir", "Marrakech", "Fes", "Tangier", "Orders", "Delivery Rate", "Return Rate"],
-      itemsAr: ["خريطة المغرب", "المداخيل حسب المدينة", "الدار البيضاء", "الرباط", "أكادير", "مراكش", "فاس", "طنجة", "الطلبات", "نسبة التسليم", "نسبة الراجع"],
-    },
-    {
-      title: "Alert Center",
-      titleAr: "مركز التنبيهات",
-      items: ["Return Rate Product X > 35%", "Stock Product Y < 10", "ROAS Campaign Z < 1.5", "Delivery Rate City A < 60%"],
-      itemsAr: ["نسبة الراجع لمنتج X أكبر من 35%", "مخزون منتج Y أقل من 10", "ROAS حملة Z أقل من 1.5", "نسبة تسليم مدينة A أقل من 60%"],
-    },
-    {
-      title: "Team Dashboard",
-      titleAr: "لوحة الفريق",
-      items: ["Employees", "Performance", "Sales", "Orders", "Tasks", "Bonuses"],
-      itemsAr: ["الموظفين", "الأداء", "المبيعات", "الطلبات", "المهام", "المكافآت"],
-    },
-    {
-      title: "Automation Center",
-      titleAr: "مركز الأتمتة",
-      items: ["Auto Confirm", "Auto SMS", "Auto WhatsApp", "Auto Email", "Auto Return Detection", "Auto Refund", "Auto Inventory Sync"],
-      itemsAr: ["تأكيد تلقائي", "SMS تلقائي", "WhatsApp تلقائي", "Email تلقائي", "كشف الراجع تلقائي", "Refund تلقائي", "مزامنة المخزون"],
-    },
-    {
-      title: "AI Center",
-      titleAr: "مركز الذكاء الاصطناعي",
-      items: ["AI Sales Forecast", "AI Revenue Forecast", "AI Stock Forecast", "AI Return Prediction", "AI Fraud Detection", "What happened?", "Why happened?", "What to do next?"],
-      itemsAr: ["توقع المبيعات", "توقع المداخيل", "توقع المخزون", "توقع الراجع", "كشف الاحتيال", "ماذا وقع؟", "لماذا وقع؟", "ماذا نفعل؟"],
+      Icon: Boxes,
+      title: t("AI Center", "مركز الذكاء الاصطناعي"),
+      desc: t("Sales & revenue forecast, return & fraud prediction.", "توقع المبيعات والمداخيل، توقع الراجع والاحتيال."),
+      connected: false,
+      metrics: [
+        { label: t("Forecast", "التوقع"), value: "—" },
+        { label: t("Fraud", "الاحتيال"), value: "—" },
+        { label: t("Insights", "تحليلات"), value: "—" },
+      ],
     },
   ];
 
   return (
-    <div className="grid gap-6 xl:grid-cols-2">
-      {blocks.map((block) => (
-        <DashboardSection key={block.title} title={block.title} titleAr={block.titleAr} subtitle={INTEGRATION_NOTE.en} subtitleAr={INTEGRATION_NOTE.ar} lang={lang}>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {(isArabic ? block.itemsAr : block.items).map((item, index) => (
-              <div key={`${block.title}-${item}`} className="rounded-2xl bg-[#F8FAFC] p-4">
-                <p className="text-sm font-black">{item}</p>
-                <p className="mt-2 text-2xl font-black text-[#1E4A8C]">
-                  {enterpriseValue(block.title, index, analytics, statusMap, lang)}
-                </p>
-                <p className="mt-1 text-xs font-bold text-[#667085]">{INTEGRATION_NOTE[lang]}</p>
+    <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+      {modules.map((m) => (
+        <div key={m.title} className="rounded-[26px] border border-gray-100 bg-white p-5 shadow-sm">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#EEF5FF] text-[#1E4A8C]">
+              <m.Icon className="h-5 w-5" />
+            </div>
+            <span className={`rounded-full px-3 py-1 text-[11px] font-black ${m.connected ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>
+              {m.connected ? t("Live", "مفعّل") : t("Integration ready", "جاهز للربط")}
+            </span>
+          </div>
+          <h3 className="mt-4 text-lg font-black">{m.title}</h3>
+          <p className="mt-1 text-xs font-semibold leading-6 text-[#667085]">{m.desc}</p>
+          <div className="mt-4 space-y-2">
+            {m.metrics.map((metric) => (
+              <div key={metric.label} className="flex items-center justify-between rounded-xl bg-[#F8FAFC] px-3 py-2">
+                <span className="text-xs font-bold text-[#667085]">{metric.label}</span>
+                <span className="text-sm font-black text-[#102033]">{metric.value}</span>
               </div>
             ))}
           </div>
-        </DashboardSection>
+        </div>
       ))}
     </div>
   );
 }
 
-function OrdersControl({
-  lang,
-  orders,
-  query,
-  setQuery,
-  statusFilter,
-  setStatusFilter,
-  sheetFilter,
-  setSheetFilter,
-  loadDashboard,
-  onStatusChange,
-}: {
-  lang: Lang;
-  orders: AdminOrder[];
-  query: string;
-  setQuery: (value: string) => void;
-  statusFilter: string;
-  setStatusFilter: (value: string) => void;
-  sheetFilter: string;
-  setSheetFilter: (value: string) => void;
-  loadDashboard: () => void;
-  onStatusChange: (order: AdminOrder, status: string) => void;
-}) {
-  const isArabic = lang === "ar";
+function GranularityToggle({ value, setValue, lang }: { value: Granularity; setValue: (v: Granularity) => void; lang: Lang }) {
+  const options: { id: Granularity; en: string; ar: string }[] = [
+    { id: "daily", en: "Daily", ar: "يومي" },
+    { id: "weekly", en: "Weekly", ar: "أسبوعي" },
+    { id: "monthly", en: "Monthly", ar: "شهري" },
+  ];
   return (
-    <DashboardSection title="Orders Control Center" titleAr="مركز التحكم في الطلبات" subtitle="Search, filter, and update order status" subtitleAr="بحث، فلترة، وتغيير حالة الطلبات" lang={lang}>
-      <div className="mb-5 grid gap-3 md:grid-cols-[1fr_180px_180px_auto]">
-        <input
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          placeholder={isArabic ? "بحث بالاسم، الهاتف، المدينة، أو رقم الطلب" : "Search name, phone, city, or order number"}
-          className="rounded-2xl border border-gray-200 px-4 py-3 text-sm font-bold outline-none focus:border-[#1E4A8C]"
-        />
-        <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} className="rounded-2xl border border-gray-200 px-4 py-3 text-sm font-bold">
-          <option value="">{isArabic ? "كل الحالات" : "All statuses"}</option>
-          {ORDER_STATUSES.map((item) => (
-            <option key={item.value} value={item.value}>
-              {isArabic ? item.ar : item.en}
-            </option>
-          ))}
-        </select>
-        <select value={sheetFilter} onChange={(event) => setSheetFilter(event.target.value)} className="rounded-2xl border border-gray-200 px-4 py-3 text-sm font-bold">
-          <option value="">{isArabic ? "كل Google Sheet" : "All Sheet Sync"}</option>
-          <option value="pending">pending</option>
-          <option value="synced">synced</option>
-          <option value="failed">failed</option>
-          <option value="skipped">skipped</option>
-        </select>
-        <button onClick={loadDashboard} className="rounded-2xl bg-[#102033] px-5 py-3 text-sm font-black text-white">
-          {isArabic ? "تطبيق" : "Apply"}
+    <div className="mb-4 flex gap-2">
+      {options.map((o) => (
+        <button
+          key={o.id}
+          onClick={() => setValue(o.id)}
+          className={`rounded-full px-4 py-1.5 text-xs font-black transition ${
+            value === o.id ? "bg-[#1E4A8C] text-white" : "bg-[#F5F7FB] text-[#667085] hover:bg-[#EEF5FF]"
+          }`}
+        >
+          {lang === "ar" ? o.ar : o.en}
         </button>
-      </div>
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[980px] border-separate border-spacing-y-2 text-sm">
-          <thead>
-            <tr className="text-xs font-black text-[#667085]">
-              <th className="px-3 py-2">{isArabic ? "الطلب" : "Order"}</th>
-              <th className="px-3 py-2">{isArabic ? "العميل" : "Customer"}</th>
-              <th className="px-3 py-2">{isArabic ? "الهاتف" : "Phone"}</th>
-              <th className="px-3 py-2">{isArabic ? "المدينة" : "City"}</th>
-              <th className="px-3 py-2">{isArabic ? "العرض" : "Offer"}</th>
-              <th className="px-3 py-2">{isArabic ? "المبلغ" : "Revenue"}</th>
-              <th className="px-3 py-2">Sheet</th>
-              <th className="px-3 py-2">{isArabic ? "الحالة" : "Status"}</th>
-              <th className="px-3 py-2">{isArabic ? "التاريخ" : "Date"}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {orders.map((order) => (
-              <OrderRow key={order.id} lang={lang} order={order} onStatusChange={onStatusChange} />
-            ))}
-          </tbody>
-        </table>
-        {!orders.length ? <EmptyState text={isArabic ? "ماكاين حتى طلب مطابق للفلاتر." : "No orders match these filters."} /> : null}
-      </div>
-    </DashboardSection>
-  );
-}
-
-function KpiGroup({ title, titleAr, cards, lang }: { title: string; titleAr: string; cards: KpiData[]; lang: Lang }) {
-  return (
-    <div className="mt-6">
-      <h3 className="mb-3 text-xl font-black">{lang === "ar" ? titleAr : title}</h3>
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {cards.map((item) => (
-          <KpiCard key={item.en} label={lang === "ar" ? item.ar : item.en} value={item.value} note={item.note} />
-        ))}
-      </div>
+      ))}
     </div>
   );
 }
 
-function DashboardSection({
-  title,
-  titleAr,
-  subtitle,
-  subtitleAr,
-  lang,
-  children,
-}: {
-  title: string;
-  titleAr: string;
-  subtitle: string;
-  subtitleAr: string;
-  lang: Lang;
-  children: React.ReactNode;
-}) {
+function BarChart({ data, max, emptyText }: { data: { label: string; value: number }[]; max: number; emptyText: string }) {
   return (
-    <section className="rounded-[30px] border border-gray-100 bg-white p-5 shadow-sm">
+    <div className="flex h-64 items-end gap-2 overflow-x-auto rounded-3xl bg-[#F8FAFC] p-4">
+      {data.map((item) => (
+        <div key={item.label} className="group flex min-w-10 flex-1 flex-col items-center gap-2">
+          <div className="relative w-full">
+            <div
+              className="w-full rounded-t-xl bg-gradient-to-t from-[#1E4A8C] to-[#60A5FA] transition group-hover:from-[#173B70]"
+              style={{ height: `${Math.max(6, (item.value / max) * 190)}px` }}
+              title={`${item.label}: ${formatMad(item.value)}`}
+            />
+          </div>
+          <span className="whitespace-nowrap text-[10px] font-bold text-[#667085]">{item.label}</span>
+        </div>
+      ))}
+      {!data.length ? <EmptyState text={emptyText} /> : null}
+    </div>
+  );
+}
+
+function FunnelStep({ label, count: stepCount, rate }: { label: string; count: number; rate: number }) {
+  return (
+    <div className="rounded-2xl bg-[#F8FAFC] p-3">
+      <div className="flex items-center justify-between">
+        <span className="text-sm font-black">{label}</span>
+        <span className="text-sm font-black text-[#1E4A8C]">{stepCount}</span>
+      </div>
+      <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-gray-200">
+        <div className="h-full rounded-full bg-gradient-to-l from-[#1E4A8C] to-[#60A5FA]" style={{ width: `${Math.max(3, rate)}%` }} />
+      </div>
+      <p className="mt-1 text-xs font-bold text-[#667085]">{rate}%</p>
+    </div>
+  );
+}
+
+function StatusTile({ label, count: total, revenue, color }: { label: string; count: number; revenue: number; color: string }) {
+  return (
+    <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
+      <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-black ${color}`}>{label}</span>
+      <p className="mt-3 text-2xl font-black">{total}</p>
+      <p className="mt-1 text-xs font-bold text-[#667085]">{formatMad(revenue)}</p>
+    </div>
+  );
+}
+
+function Card({ title, subtitle, children }: { title: string; subtitle: string; children: React.ReactNode }) {
+  return (
+    <section className="rounded-[26px] border border-gray-100 bg-white p-5 shadow-sm">
       <div className="mb-5">
-        <p className="text-sm font-black text-[#1E4A8C]">{title}</p>
-        <h2 className="text-2xl font-black">{lang === "ar" ? titleAr : title}</h2>
-        <p className="mt-1 text-sm font-bold text-[#667085]">{lang === "ar" ? subtitleAr : subtitle}</p>
+        <h2 className="text-xl font-black">{title}</h2>
+        <p className="mt-1 text-sm font-bold text-[#667085]">{subtitle}</p>
       </div>
       {children}
     </section>
@@ -590,22 +773,10 @@ function DashboardSection({
 function KpiCard({ label, value, note, tone = "blue" }: { label: string; value: string; note: string; tone?: "blue" | "green" | "red" }) {
   const toneClass = tone === "red" ? "text-red-600 bg-red-50" : tone === "green" ? "text-green-700 bg-green-50" : "text-[#1E4A8C] bg-[#EEF5FF]";
   return (
-    <div className="rounded-[24px] border border-gray-100 bg-white p-5 shadow-sm">
+    <div className="rounded-[22px] border border-gray-100 bg-white p-5 shadow-sm transition hover:shadow-md">
       <p className="text-sm font-black text-[#667085]">{label}</p>
       <p className="mt-3 text-3xl font-black">{value}</p>
       <span className={`mt-4 inline-flex rounded-full px-3 py-1 text-xs font-black ${toneClass}`}>{note}</span>
-    </div>
-  );
-}
-
-function MetricRow({ label, value, sub }: { label: string; value: string; sub: string }) {
-  return (
-    <div className="flex items-center justify-between gap-4 rounded-2xl bg-[#F8FAFC] px-4 py-3">
-      <div>
-        <p className="font-black">{label}</p>
-        <p className="text-xs font-bold text-[#667085]">{sub}</p>
-      </div>
-      <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-[#1E4A8C]">{value}</span>
     </div>
   );
 }
@@ -616,23 +787,25 @@ function CompareCard({ label, left, right }: { label: string; left: string; righ
       <p className="text-sm font-black text-[#667085]">{label}</p>
       <div className="mt-3 flex items-center justify-between gap-3">
         <span className="text-lg font-black text-[#1E4A8C]">{left}</span>
-        <span className="text-xs font-bold text-[#667085]">vs</span>
+        <span className="text-xs font-bold text-[#9AA7B8]">vs</span>
         <span className="text-lg font-black">{right}</span>
       </div>
     </div>
   );
 }
 
-function LanguageToggle({ lang, setLang }: { lang: Lang; setLang: (lang: Lang) => void }) {
+function LanguageToggle({ lang, setLang, dark = false }: { lang: Lang; setLang: (lang: Lang) => void; dark?: boolean }) {
   return (
-    <div className="flex rounded-full bg-[#EEF5FF] p-1">
+    <div className={`flex rounded-full p-1 ${dark ? "bg-white/15" : "bg-[#EEF5FF]"}`}>
       {(["ar", "en"] as const).map((item) => (
         <button
           key={item}
           onClick={() => setLang(item)}
-          className={`rounded-full px-4 py-2 text-xs font-black ${lang === item ? "bg-[#1E4A8C] text-white" : "text-[#1E4A8C]"}`}
+          className={`rounded-full px-3 py-1.5 text-xs font-black transition ${
+            lang === item ? "bg-white text-[#1E4A8C]" : dark ? "text-white" : "text-[#1E4A8C]"
+          }`}
         >
-          {item === "ar" ? "العربية" : "English"}
+          {item === "ar" ? "العربية" : "EN"}
         </button>
       ))}
     </div>
@@ -642,7 +815,7 @@ function LanguageToggle({ lang, setLang }: { lang: Lang; setLang: (lang: Lang) =
 function OrderRow({ lang, order, onStatusChange }: { lang: Lang; order: AdminOrder; onStatusChange: (order: AdminOrder, status: string) => void }) {
   const isArabic = lang === "ar";
   return (
-    <tr className="rounded-2xl bg-white shadow-sm">
+    <tr className="bg-white shadow-sm">
       <td className="px-3 py-4 font-black">{order.public_order_number}</td>
       <td className="px-3 py-4 font-bold">{order.customer_name}</td>
       <td className="px-3 py-4 font-mono text-xs" dir="ltr">{order.phone_e164}</td>
@@ -656,7 +829,7 @@ function OrderRow({ lang, order, onStatusChange }: { lang: Lang; order: AdminOrd
         <select
           value={order.status}
           onChange={(event) => onStatusChange(order, event.target.value)}
-          className="rounded-full border border-gray-200 px-3 py-2 text-xs font-black"
+          className={`rounded-full border-0 px-3 py-2 text-xs font-black outline-none ${STATUS_COLOR[order.status] ?? "bg-gray-100 text-gray-700"}`}
         >
           {ORDER_STATUSES.map((item) => (
             <option key={item.value} value={item.value}>
@@ -671,13 +844,27 @@ function OrderRow({ lang, order, onStatusChange }: { lang: Lang; order: AdminOrd
 }
 
 function EmptyState({ text }: { text: string }) {
-  return <div className="flex min-h-24 items-center justify-center rounded-3xl bg-[#F8FAFC] p-6 text-center text-sm font-bold text-[#667085]">{text}</div>;
+  return <div className="flex min-h-24 w-full items-center justify-center rounded-3xl bg-[#F8FAFC] p-6 text-center text-sm font-bold text-[#667085]">{text}</div>;
 }
 
-type KpiData = { en: string; ar: string; value: string; note: string };
-
-function card(en: string, ar: string, value: string, note: string): KpiData {
-  return { en, ar, value, note };
+function bucketRevenue(daily: { date: string; total_mad: number }[], granularity: Granularity) {
+  if (granularity === "daily") {
+    return daily.map((d) => ({ label: d.date.slice(5), value: d.total_mad }));
+  }
+  const map = new Map<string, number>();
+  daily.forEach((d) => {
+    const date = new Date(d.date);
+    let key: string;
+    if (granularity === "monthly") {
+      key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+    } else {
+      const firstJan = new Date(date.getFullYear(), 0, 1);
+      const week = Math.ceil(((date.getTime() - firstJan.getTime()) / 86400000 + firstJan.getDay() + 1) / 7);
+      key = `${String(date.getFullYear()).slice(2)}-W${week}`;
+    }
+    map.set(key, (map.get(key) ?? 0) + d.total_mad);
+  });
+  return [...map.entries()].map(([label, value]) => ({ label, value }));
 }
 
 function count(value?: number) {
@@ -692,36 +879,9 @@ function percent(value?: number) {
   return `${value ?? 0}%`;
 }
 
-function ordersNote(value: number | undefined, lang: Lang) {
-  return `${value ?? 0} ${lang === "ar" ? "طلب" : "orders"}`;
-}
-
-function translateChartMode(value: string, lang: Lang) {
-  const ar: Record<string, string> = { Hourly: "بالساعة", Daily: "يومي", Weekly: "أسبوعي", Monthly: "شهري" };
-  return lang === "ar" ? ar[value] ?? value : value;
-}
-
 function translateFunnel(value: string, lang: Lang) {
   const ar: Record<string, string> = { Orders: "طلبات", Confirmed: "مؤكد", Shipped: "مرسل", Delivered: "مسلم", Paid: "مدفوع" };
   return lang === "ar" ? ar[value] ?? value : value;
-}
-
-function enterpriseValue(
-  section: string,
-  index: number,
-  analytics: AdminAnalytics | null,
-  statusMap: Map<string, { count: number; total_mad: number }>,
-  lang: Lang
-) {
-  if (section === "Products Dashboard" && index <= 2) return "Blood Sugar Complex";
-  if (section === "Products Dashboard" && index === 4) return money(analytics?.total_revenue_mad);
-  if (section === "Products Dashboard" && index === 5) return count(analytics?.total_orders);
-  if (section === "Products Dashboard" && index === 6) return count(statusMap.get("delivered")?.count);
-  if (section === "Geo Dashboard" && index === 1) return money(analytics?.total_revenue_mad);
-  if (section === "Finance Dashboard" && index === 1) return money(analytics?.total_revenue_mad);
-  if (section === "Finance Dashboard" && index === 3) return money(analytics?.total_revenue_mad);
-  if (section === "Alert Center" && index === 0 && (statusMap.get("returned")?.count ?? 0) > 0) return lang === "ar" ? "راجع موجود" : "Returns exist";
-  return "0";
 }
 
 function sheetClass(status: string) {
@@ -732,7 +892,7 @@ function sheetClass(status: string) {
 }
 
 function formatDate(value: string, lang: Lang) {
-  return new Intl.DateTimeFormat(lang === "ar" ? "ar-MA" : "en-MA", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
+  return new Intl.DateTimeFormat(lang === "ar" ? "ar-MA" : "en-GB", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
 }
 
 function errorMessage(err: unknown, lang: Lang) {
