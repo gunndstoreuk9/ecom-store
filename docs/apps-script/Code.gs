@@ -2,15 +2,12 @@ const ORDERS_SHEET_NAME = 'Sheet1';
 
 const ORDER_HEADERS = [
   'DATE',
-  'ORDERID',
-  'CITY',
+  'SKU',
   'FULL NAME',
   'PHONE NUMBER',
-  'PRODUCT',
-  'SKU',
+  'CITY',
   'QUANTITY',
   'TOTAL PRICE MAD',
-  'CURRENCY',
   'STATUS'
 ];
 
@@ -21,7 +18,7 @@ function doGet() {
 function doPost(e) {
   try {
     const body = parseBody(e);
-    const result = upsertOrder(body.order || body);
+    const result = appendOrder(body.order || body);
 
     return jsonResponse({
       ok: true,
@@ -43,11 +40,7 @@ function parseBody(e) {
   return JSON.parse(e.postData.contents);
 }
 
-function upsertOrder(order) {
-  if (!order.ORDERID) {
-    throw new Error('ORDERID is required');
-  }
-
+function appendOrder(order) {
   const lock = LockService.getScriptLock();
   lock.waitLock(10000);
 
@@ -56,14 +49,7 @@ function upsertOrder(order) {
     ensureHeaders(sheet);
 
     const headers = getHeaders(sheet);
-    const orderIdColumn = headers.indexOf('ORDERID') + 1;
-    const rowIndex = findRowByValue(sheet, orderIdColumn, order.ORDERID);
     const row = buildOrderRow(headers, order);
-
-    if (rowIndex > 0) {
-      sheet.getRange(rowIndex, 1, 1, headers.length).setValues([row]);
-      return { mode: 'updated', row: rowIndex };
-    }
 
     sheet.appendRow(row);
     return { mode: 'inserted', row: sheet.getLastRow() };
@@ -101,36 +87,15 @@ function getHeaders(sheet) {
     });
 }
 
-function findRowByValue(sheet, column, value) {
-  const lastRow = sheet.getLastRow();
-
-  if (lastRow < 2 || column < 1) {
-    return -1;
-  }
-
-  const values = sheet.getRange(2, column, lastRow - 1, 1).getValues();
-
-  for (let i = 0; i < values.length; i++) {
-    if (String(values[i][0]) === String(value)) {
-      return i + 2;
-    }
-  }
-
-  return -1;
-}
-
 function buildOrderRow(headers, order) {
   const rowObject = {
     'DATE': order.DATE || '',
-    'ORDERID': order.ORDERID || '',
-    'CITY': order.CITY || 'AGADIR',
+    'SKU': order.SKU || '',
     'FULL NAME': order['FULL NAME'] || '',
     'PHONE NUMBER': order['PHONE NUMBER'] || '',
-    'PRODUCT': order.PRODUCT || '',
-    'SKU': order.SKU || '',
+    'CITY': order.CITY || '',
     'QUANTITY': order.QUANTITY || '',
     'TOTAL PRICE MAD': order['TOTAL PRICE MAD'] || '',
-    'CURRENCY': order.CURRENCY || 'MAD',
     'STATUS': ''
   };
 

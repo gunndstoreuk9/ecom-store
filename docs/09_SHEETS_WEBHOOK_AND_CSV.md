@@ -41,18 +41,15 @@ Required columns are in `orders_sheet_template.csv`.
 Required columns:
 
 - `DATE`
-- `ORDERID`
-- `CITY`
+- `SKU`
 - `FULL NAME`
 - `PHONE NUMBER`
-- `PRODUCT`
-- `SKU`
+- `CITY`
 - `QUANTITY`
 - `TOTAL PRICE MAD`
-- `CURRENCY`
 - `STATUS`
 
-The website only collects name and phone. `CITY` is sent as `AGADIR`. `STATUS` is intentionally empty for operations.
+The website collects name, phone, and city. `STATUS` is intentionally empty for operations.
 
 ## Webhook Security
 
@@ -71,9 +68,7 @@ If upgrading later, use HMAC signatures or a shared secret again.
 
 ## Backend Webhook Behavior
 
-On order creation, send the order immediately to Google Sheets.
-
-Apps Script upserts by `ORDERID`, so retrying the same order updates the same row instead of creating duplicates.
+On order creation, send the order immediately to Google Sheets. Apps Script appends a new row for each order.
 
 ## Apps Script Deployment
 
@@ -99,9 +94,7 @@ Supported:
 
 `upsert_order`:
 
-- finds row by `ORDERID`
-- updates it if found
-- appends it if not found
+- appends a new row to the sheet
 
 `ping`:
 
@@ -116,15 +109,12 @@ Backend should send:
   "action": "upsert_order",
   "order": {
     "DATE": "01/05/2026",
-    "ORDERID": "TAWAZON10001",
-    "CITY": "AGADIR",
+    "SKU": "TOPLUX-BSC-940-60",
     "FULL NAME": "Fatima",
     "PHONE NUMBER": "212604752334",
-    "PRODUCT": "المركّب الأمريكي لضبط السكر — الأصلي",
-    "SKU": "TOPLUX-BSC-940-60",
+    "CITY": "Marrakech",
     "QUANTITY": "3",
     "TOTAL PRICE MAD": 349,
-    "CURRENCY": "MAD",
     "STATUS": ""
   }
 }

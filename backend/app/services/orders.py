@@ -19,7 +19,6 @@ from app.services.phone import (
 
 PRODUCT_NAME_AR = "المركّب الأمريكي لضبط السكر — الأصلي"
 PRODUCT_SHEET_SKU = "TOPLUX-BSC-940-60"
-SHEET_CITY = "AGADIR"
 
 
 def create_order(
@@ -109,21 +108,17 @@ def to_order_detail_response(order: Order) -> OrderDetailResponse:
 
 def order_sheet_payload(order: Order) -> dict:
     created_at = order.created_at or datetime.now(timezone.utc)
-    product_names = [item.name_ar for item in order.items] or [PRODUCT_NAME_AR]
-    product_skus = [PRODUCT_SHEET_SKU for _ in product_names]
+    product_skus = [PRODUCT_SHEET_SKU for _ in order.items] or [PRODUCT_SHEET_SKU]
     product_quantities = [str(item.qty) for item in order.items] or [str(order.hero_qty)]
 
     return {
         "DATE": created_at.strftime("%d/%m/%Y"),
-        "ORDERID": order.public_order_number,
-        "CITY": SHEET_CITY,
+        "SKU": "/".join(product_skus),
         "FULL NAME": order.customer_name,
         "PHONE NUMBER": order.phone_e164.replace("+", ""),
-        "PRODUCT": "/".join(product_names),
-        "SKU": "/".join(product_skus),
+        "CITY": order.city or "",
         "QUANTITY": "/".join(product_quantities),
         "TOTAL PRICE MAD": order.total_mad,
-        "CURRENCY": "MAD",
         "STATUS": "",
     }
 

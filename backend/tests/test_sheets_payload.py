@@ -10,6 +10,7 @@ def test_order_sheet_payload_matches_operations_sheet():
         created_at=datetime(2026, 5, 1, tzinfo=timezone.utc),
         customer_name="Fatima",
         phone_e164="+212604752334",
+        city="Marrakech",
         hero_qty=3,
         total_mad=349,
         items=[SimpleNamespace(name_ar="المركّب الأمريكي لضبط السكر — الأصلي", qty=3)],
@@ -19,14 +20,11 @@ def test_order_sheet_payload_matches_operations_sheet():
 
     assert payload == {
         "DATE": "01/05/2026",
-        "ORDERID": "TAWAZON10001",
-        "CITY": "AGADIR",
+        "SKU": "TOPLUX-BSC-940-60",
         "FULL NAME": "Fatima",
         "PHONE NUMBER": "212604752334",
-        "PRODUCT": "المركّب الأمريكي لضبط السكر — الأصلي",
-        "SKU": "TOPLUX-BSC-940-60",
+        "CITY": "Marrakech",
         "QUANTITY": "3",
         "TOTAL PRICE MAD": 349,
-        "CURRENCY": "MAD",
         "STATUS": "",
     }
