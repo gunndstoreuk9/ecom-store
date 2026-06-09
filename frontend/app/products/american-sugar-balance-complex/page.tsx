@@ -803,10 +803,10 @@ export default function ProductPage() {
             subtitle="وضحنا لك أهم التفاصيل: الدفع، التوصيل، طريقة التأكيد، والعرض المناسب."
           />
 
-          <div className="grid gap-8 lg:grid-cols-[0.8fr_1.2fr] lg:items-start">
-            <div className="sticky top-24 rounded-[32px] bg-gradient-to-br from-[#102033] to-[#1E4A8C] p-6 text-white shadow-2xl">
+          <div className="grid gap-6 lg:grid-cols-[0.8fr_1.2fr] lg:items-start lg:gap-8">
+            <div className="rounded-[28px] bg-gradient-to-br from-[#102033] to-[#1E4A8C] p-5 text-white shadow-2xl sm:rounded-[32px] sm:p-6 lg:sticky lg:top-24">
               <p className="text-sm font-black text-[#FDE68A]">ثقة قبل الطلب</p>
-              <h3 className="mt-2 text-3xl font-black leading-tight">كلشي واضح قبل ما يخرج الطلب من عندنا</h3>
+              <h3 className="mt-2 text-2xl font-black leading-tight sm:text-3xl">كلشي واضح قبل ما يخرج الطلب من عندنا</h3>
               <p className="mt-4 text-sm font-semibold leading-7 text-blue-100">
                 ماكاين لا دفع مسبق لا مفاجآت فالثمن. كنديرو تأكيد بالهاتف باش تعرف شنو طلبتي، شحال غادي تخلص، وفين غادي توصلك الشحنة.
               </p>
@@ -827,15 +827,15 @@ export default function ProductPage() {
                 <details
                   key={question}
                   open={index === 0}
-                  className="group rounded-[26px] border border-gray-100 bg-white p-5 shadow-sm transition hover:border-[#D7E4F5] hover:shadow-lg"
+                  className="group rounded-[22px] border border-gray-100 bg-white p-4 shadow-sm transition hover:border-[#D7E4F5] hover:shadow-lg sm:rounded-[26px] sm:p-5"
                 >
-                  <summary className="flex cursor-pointer list-none items-center justify-between gap-4">
-                    <span className="text-base font-black leading-7 text-[#102033] md:text-lg">{question}</span>
-                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#EEF5FF] text-xl font-black text-[#1E4A8C] transition group-open:rotate-45">
+                  <summary className="flex cursor-pointer list-none items-start justify-between gap-3 text-right sm:gap-4">
+                    <span className="min-w-0 flex-1 text-sm font-black leading-7 text-[#102033] sm:text-base md:text-lg">{question}</span>
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#EEF5FF] text-lg font-black text-[#1E4A8C] transition group-open:rotate-45 sm:h-9 sm:w-9 sm:text-xl">
                       +
                     </span>
                   </summary>
-                  <p className="mt-4 border-t border-gray-100 pt-4 text-sm font-semibold leading-7 text-[#667085]">{answer}</p>
+                  <p className="mt-4 border-t border-gray-100 pt-4 text-right text-sm font-semibold leading-7 text-[#667085]">{answer}</p>
                 </details>
               ))}
             </div>
