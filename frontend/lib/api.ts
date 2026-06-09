@@ -79,6 +79,11 @@ export interface AdminOrder {
   phone_local: string;
   phone_e164: string;
   city?: string | null;
+  call_status?: string | null;
+  call_note?: string | null;
+  call_attempts: number;
+  delivery_company?: string | null;
+  delivery_city?: string | null;
   hero_sku: string;
   hero_qty: number;
   total_mad: number;
@@ -89,6 +94,13 @@ export interface AdminOrder {
   updated_at: string;
   utm?: Record<string, string> | null;
   items: AdminOrderItem[];
+}
+
+export interface AdminOrderCallPayload {
+  call_status: string;
+  call_note?: string;
+  delivery_company?: string;
+  delivery_city?: string;
 }
 
 export interface AdminOrdersResponse {
@@ -184,6 +196,7 @@ export async function getAdminOrders(
     limit?: number;
     offset?: number;
     status?: string;
+    call_status?: string;
     sheet_sync_status?: string;
     q?: string;
   } = {}
@@ -202,5 +215,13 @@ export async function updateAdminOrderStatus(adminKey: string, orderId: string, 
     method: "PATCH",
     headers: { "X-Admin-Key": adminKey },
     body: JSON.stringify({ status }),
+  });
+}
+
+export async function updateAdminOrderCall(adminKey: string, orderId: string, payload: AdminOrderCallPayload): Promise<AdminOrder> {
+  return api<AdminOrder>(`/v1/admin/orders/${orderId}/call`, {
+    method: "PATCH",
+    headers: { "X-Admin-Key": adminKey },
+    body: JSON.stringify(payload),
   });
 }

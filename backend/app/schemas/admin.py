@@ -20,6 +20,28 @@ ORDER_STATUSES = {
     "refused",
 }
 
+CALL_STATUSES = {
+    "confirmed",
+    "no_answer",
+    "voicemail",
+    "cancelled",
+    "wrong_number",
+    "busy",
+    "duplicate",
+}
+
+CALL_STATUS_TO_ORDER_STATUS = {
+    "confirmed": "confirmed",
+    "cancelled": "cancelled",
+    "wrong_number": "cancelled",
+    "duplicate": "cancelled",
+    "no_answer": "no_answer",
+    "voicemail": "no_answer",
+    "busy": "no_answer",
+}
+
+RETRY_CALL_STATUSES = {"no_answer", "voicemail", "busy"}
+
 
 class AdminOrderItem(BaseModel):
     sku: str
@@ -38,6 +60,11 @@ class AdminOrderListItem(BaseModel):
     phone_local: str
     phone_e164: str
     city: Optional[str] = None
+    call_status: Optional[str] = None
+    call_note: Optional[str] = None
+    call_attempts: int = 0
+    delivery_company: Optional[str] = None
+    delivery_city: Optional[str] = None
     hero_sku: str
     hero_qty: int
     total_mad: int
@@ -129,4 +156,20 @@ class AdminOrderStatusUpdate(BaseModel):
         if normalized not in ORDER_STATUSES:
             allowed = ", ".join(sorted(ORDER_STATUSES))
             raise ValueError(f"Status must be one of: {allowed}")
+        return normalized
+
+
+class AdminOrderCallUpdate(BaseModel):
+    call_status: str
+    call_note: Optional[str] = Field(default=None, max_length=2000)
+    delivery_company: Optional[str] = Field(default=None, max_length=64)
+    delivery_city: Optional[str] = Field(default=None, max_length=120)
+
+    @field_validator("call_status")
+    @classmethod
+    def validate_call_status(cls, value: str) -> str:
+        normalized = value.strip().lower()
+        if normalized not in CALL_STATUSES:
+            allowed = ", ".join(sorted(CALL_STATUSES))
+            raise ValueError(f"Call status must be one of: {allowed}")
         return normalized

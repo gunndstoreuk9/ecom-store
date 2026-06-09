@@ -1,9 +1,11 @@
 "use client";
 
+import Link from "next/link";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import {
   Boxes,
   Calendar,
+  Headphones,
   LayoutDashboard,
   LogOut,
   MapPin,
@@ -268,6 +270,13 @@ export default function AdminDashboardPage() {
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <LanguageToggle lang={lang} setLang={setLang} dark />
+            <Link
+              href="/admin/call-center"
+              className="flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-black text-[#1E4A8C] transition hover:bg-white/90"
+            >
+              <Headphones className="h-4 w-4" />
+              {t("Call Center", "مركز الاتصال")}
+            </Link>
             <button
               onClick={() => void loadDashboard()}
               className="flex items-center gap-2 rounded-full bg-white/15 px-4 py-2 text-sm font-black text-white transition hover:bg-white/25"

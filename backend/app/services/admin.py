@@ -9,6 +9,8 @@ from sqlalchemy.orm import Session, selectinload
 
 from app.models.order import Order, OrderItem
 from app.schemas.admin import (
+    CALL_STATUS_TO_ORDER_STATUS,
+    RETRY_CALL_STATUSES,
     AdminAnalyticsResponse,
     AdminCityCount,
     AdminDailyRevenue,
@@ -34,6 +36,7 @@ def list_admin_orders(
     limit: int,
     offset: int,
     status: Optional[str] = None,
+    call_status: Optional[str] = None,
     sheet_sync_status: Optional[str] = None,
     q: Optional[str] = None,
     date_from: Optional[date] = None,
@@ -43,6 +46,7 @@ def list_admin_orders(
     query = _apply_order_filters(
         query,
         status=status,
+        call_status=call_status,
         sheet_sync_status=sheet_sync_status,
         q=q,
         date_from=date_from,
@@ -105,6 +109,43 @@ def update_admin_order_status(db: Session, order_id: str, new_status: str) -> Op
     return to_admin_order(order)
 
 
+def update_admin_order_call(
+    db: Session,
+    order_id: str,
+    *,
+    call_status: str,
+    call_note: Optional[str] = None,
+    delivery_company: Optional[str] = None,
+    delivery_city: Optional[str] = None,
+) -> Optional[AdminOrderListItem]:
+    try:
+        order_uuid = UUID(order_id)
+    except ValueError:
+        return None
+    order = db.get(Order, order_uuid)
+    if not order:
+        return None
+
+    order.call_status = call_status
+    if call_note is not None:
+        order.call_note = call_note.strip() or None
+    if delivery_company is not None:
+        order.delivery_company = delivery_company.strip() or None
+    if delivery_city is not None:
+        order.delivery_city = delivery_city.strip() or None
+
+    if call_status in RETRY_CALL_STATUSES:
+        order.call_attempts = (order.call_attempts or 0) + 1
+
+    mapped_status = CALL_STATUS_TO_ORDER_STATUS.get(call_status)
+    if mapped_status:
+        order.status = mapped_status
+
+    db.commit()
+    db.refresh(order)
+    return to_admin_order(order)
+
+
 def to_admin_order(order: Order) -> AdminOrderListItem:
     return AdminOrderListItem(
         id=order.id,
@@ -114,6 +155,11 @@ def to_admin_order(order: Order) -> AdminOrderListItem:
         phone_local=order.phone_local,
         phone_e164=order.phone_e164,
         city=order.city,
+        call_status=order.call_status,
+        call_note=order.call_note,
+        call_attempts=order.call_attempts or 0,
+        delivery_company=order.delivery_company,
+        delivery_city=order.delivery_city,
         hero_sku=order.hero_sku,
         hero_qty=order.hero_qty,
         total_mad=order.total_mad,
@@ -135,6 +181,7 @@ def _apply_order_filters(
     query,
     *,
     status: Optional[str],
+    call_status: Optional[str],
     sheet_sync_status: Optional[str],
     q: Optional[str],
     date_from: Optional[date],
@@ -142,6 +189,11 @@ def _apply_order_filters(
 ):
     if status:
         query = query.filter(Order.status == status)
+    if call_status:
+        if call_status == "pending":
+            query = query.filter(Order.call_status.is_(None))
+        else:
+            query = query.filter(Order.call_status == call_status)
     if sheet_sync_status:
         query = query.filter(Order.sheet_sync_status == sheet_sync_status)
     if q:
