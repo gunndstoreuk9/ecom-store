@@ -22,10 +22,14 @@ async def sync_order_to_sheet(order_id: str, db_factory) -> None:
             "action": "upsert_order",
             "order": order_sheet_payload(order),
         }
-        async with httpx.AsyncClient(timeout=10) as client:
+        async with httpx.AsyncClient(timeout=10, follow_redirects=True) as client:
             response = await client.post(settings.sheets_webhook_url, json=payload)
             response.raise_for_status()
-        result = response.json()
+        try:
+            result = response.json()
+        except ValueError as exc:
+            preview = response.text[:300].replace("\n", " ")
+            raise RuntimeError(f"Sheets webhook returned non-JSON response: {preview}") from exc
         if not result.get("ok"):
             raise RuntimeError(f"Sheets webhook rejected order: {result}")
         order.sheet_sync_status = "synced"
