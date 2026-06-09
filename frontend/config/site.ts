@@ -13,7 +13,7 @@ export const SITE = {
   googleTagId: process.env.NEXT_PUBLIC_GOOGLE_TAG_ID ?? "",
   googleAdsConversionId: process.env.NEXT_PUBLIC_GOOGLE_ADS_CONVERSION_ID ?? "",
   googleAdsPurchaseLabel: process.env.NEXT_PUBLIC_GOOGLE_ADS_PURCHASE_LABEL ?? "",
-  defaultTitle: "تَوازُن للصحة | دعم توازن السكر والطاقة في المغرب",
+  defaultTitle: "تَوازُن للصحة | دعم وظيفة البنكرياس وتوازن السكر في المغرب",
   defaultDescription:
-    "مكمّل غذائي أمريكي بـ20 مكوّن نشط لدعم توازن السكر في النطاق الصحي، الطاقة، والتحكم في الرغبة بالحلويات. الدفع عند الاستلام في المغرب.",
+    "مكمّل غذائي أمريكي بـ20 مكوّن نشط لتحفيز ودعم وظيفة البنكرياس الطبيعية والمساعدة على توازن السكر في الدم. الدفع عند الاستلام في المغرب.",
 } as const;

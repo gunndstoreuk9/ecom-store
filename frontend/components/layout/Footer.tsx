@@ -10,7 +10,7 @@ export function Footer() {
           <div className="col-span-2 md:col-span-1">
             <div className="text-xl font-bold mb-2">تَوازُن للصحة</div>
             <p className="text-gray-400 text-sm leading-relaxed">
-              متخصصون في دعم توازن السكر والطاقة اليومية بمكوّنات مدروسة وشهادات موثّقة.
+              متخصصون في دعم وظيفة البنكرياس الطبيعية والمساعدة على توازن السكر في الدم بمكوّنات مدروسة.
             </p>
           </div>
 

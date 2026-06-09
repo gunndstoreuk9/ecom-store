@@ -41,7 +41,7 @@ export default function CollectionsPage() {
               المركّب الأمريكي لضبط السكر — الأصلي
             </h2>
             <p className="text-sm text-[#667085] mb-4 leading-relaxed">
-              20 مكوّن نشط لدعم توازن السكر، الطاقة، والتحكم في الرغبة بالحلويات.
+              20 مكوّن نشط لتحفيز ودعم وظيفة البنكرياس الطبيعية والمساعدة على توازن السكر في الدم.
             </p>
             <div className="text-yellow-400 text-sm mb-4">★★★★★ <span className="text-[#667085]">4.9 • +3,120 طلب</span></div>
             <div className="space-y-3">
