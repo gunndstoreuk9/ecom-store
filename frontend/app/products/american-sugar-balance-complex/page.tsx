@@ -655,30 +655,63 @@ export default function ProductPage() {
 
       <section className="section-padding bg-[#F8F5EF]">
         <div className="container-main">
-          <SectionHeader title="طريقة الاستعمال" subtitle="نتائج أفضل مع الاستخدام المنتظم" />
-          <div className="grid gap-4 md:grid-cols-4">
-            {[
-              ["💊", "تناول كبسولتين", "يومياً"],
-              ["🍽️", "بعد الوجبات", "الرئيسية"],
-              ["🥤", "مع كوب", "من الماء"],
-              ["📅", "الاستمرار يومياً", "لنتائج أفضل"],
-            ].map(([icon, title, text], index) => (
-              <div key={title} className="card-base p-6 text-center">
-                <div className="text-4xl">{icon}</div>
-                <p className="mt-3 inline-flex h-8 w-8 items-center justify-center rounded-xl bg-[#1E4A8C] text-sm font-extrabold text-white">
-                  {index + 1}
-                </p>
-                <h3 className="mt-3 text-lg font-extrabold leading-tight text-[#102033]">{title}</h3>
-                <p className="mt-1 text-base font-bold text-[#667085]">{text}</p>
+          <div className="grid gap-10 lg:grid-cols-[0.95fr_1.05fr] lg:items-center">
+            <div className="relative overflow-hidden rounded-[34px] bg-white p-3 shadow-2xl ring-1 ring-[#E6DCCB]">
+              <div className="relative aspect-[4/3] overflow-hidden rounded-[26px]">
+                <Image
+                  src="/images/product-page/how-to-use-woman-capsule.png"
+                  alt="طريقة استعمال المكمل الأمريكي لضبط السكر"
+                  fill
+                  sizes="(min-width: 1024px) 50vw, 100vw"
+                  className="object-cover"
+                />
               </div>
-            ))}
-          </div>
-          <div className="mx-auto mt-8 grid max-w-2xl gap-3 sm:grid-cols-3">
-            {["طبيعي", "جودة عالية", "تركيبة متطورة"].map((benefit) => (
-              <div key={benefit} className="rounded-2xl bg-white px-4 py-3 text-center text-sm font-extrabold text-[#1E4A8C] shadow-sm">
-                ✓ {benefit}
+              <div className="absolute bottom-6 right-6 rounded-2xl bg-white/95 px-4 py-3 text-right shadow-lg">
+                <p className="text-xs font-bold text-[#667085]">روتين يومي بسيط</p>
+                <p className="text-sm font-black text-[#102033]">كبسولات + ماء + استمرار</p>
               </div>
-            ))}
+            </div>
+
+            <div>
+              <p className="mb-2 text-sm font-black text-[#DC2626]">طريقة الاستعمال</p>
+              <h2 className="text-3xl font-black leading-tight text-[#102033] md:text-4xl">
+                كيفاش تستعملو بطريقة سهلة باش يبقى الروتين واضح؟
+              </h2>
+              <p className="mt-4 text-base font-semibold leading-8 text-[#667085]">
+                السر ماشي فالتعقيد. خليه عادة يومية بسيطة: بعد الوجبات الرئيسية، مع كاس ديال الماء، وبنفس الوقت تقريباً كل نهار.
+              </p>
+
+              <div className="mt-7 space-y-4">
+                {[
+                  ["1", "خد كبسولتين يومياً", "استعمل الكمية اليومية كما موضحة على العبوة، وخليها جزء من الروتين ديالك."],
+                  ["2", "الأفضل بعد الوجبات الرئيسية", "باش يكون الاستعمال منظم وسهل التذكر، خدو بعد الماكلة ماشي على معدة خاوية."],
+                  ["3", "شرب معاه كاس ماء", "الماء كيساعدك تبلع الكبسولات بسهولة ويخلي التجربة مريحة."],
+                  ["4", "استمر يومياً بلا تقطاع", "النتائج المرتبطة بالروتين كتحتاج الاستمرارية. خليه قدامك باش ماتنساهش."],
+                ].map(([step, title, text]) => (
+                  <div key={step} className="flex gap-4 rounded-3xl bg-white p-4 shadow-sm">
+                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#1E4A8C] text-lg font-black text-white">
+                      {step}
+                    </span>
+                    <div>
+                      <h3 className="text-lg font-black text-[#102033]">{title}</h3>
+                      <p className="mt-1 text-sm font-semibold leading-7 text-[#667085]">{text}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-6 grid gap-3 sm:grid-cols-3">
+                {["سهل التذكر", "مناسب للروتين اليومي", "60 كبسولة فالعلبة"].map((benefit) => (
+                  <div key={benefit} className="rounded-2xl bg-[#EEF5FF] px-4 py-3 text-center text-sm font-black text-[#1E4A8C]">
+                    ✓ {benefit}
+                  </div>
+                ))}
+              </div>
+
+              <button onClick={scrollToOrderForm} className="mt-7 w-full rounded-full bg-[#DC2626] px-8 py-4 text-base font-black text-white shadow-lg shadow-red-900/20 transition hover:bg-red-700 sm:w-auto">
+                بغيت نطلب ونبدأ الروتين
+              </button>
+            </div>
           </div>
         </div>
       </section>
