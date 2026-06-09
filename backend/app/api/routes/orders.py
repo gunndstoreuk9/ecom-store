@@ -10,6 +10,11 @@ from app.services.tracking import create_noop_conversion_events
 router = APIRouter(prefix="/orders", tags=["orders"])
 
 
+@router.options("")
+def orders_preflight() -> dict:
+    return {"ok": True}
+
+
 @router.post("", response_model=OrderResponse, status_code=status.HTTP_201_CREATED)
 async def create_order_endpoint(
     payload: CreateOrderRequest,
