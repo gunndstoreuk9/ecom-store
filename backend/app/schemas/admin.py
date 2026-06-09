@@ -9,12 +9,15 @@ from pydantic import BaseModel, Field, field_validator
 
 ORDER_STATUSES = {
     "new",
+    "awaiting_confirmation",
     "confirmed",
+    "packed",
     "no_answer",
     "cancelled",
     "shipped",
     "delivered",
     "returned",
+    "refused",
 }
 
 
@@ -77,6 +80,26 @@ class AdminSheetSyncCount(BaseModel):
     count: int
 
 
+class AdminPeriodMetric(BaseModel):
+    key: str
+    label: str
+    orders: int
+    revenue_mad: int
+
+
+class AdminRateMetric(BaseModel):
+    key: str
+    label: str
+    value: float
+
+
+class AdminFunnelStep(BaseModel):
+    key: str
+    label: str
+    count: int
+    rate: float
+
+
 class AdminAnalyticsResponse(BaseModel):
     days: int
     total_orders: int
@@ -91,6 +114,9 @@ class AdminAnalyticsResponse(BaseModel):
     daily_revenue: list[AdminDailyRevenue]
     top_cities: list[AdminCityCount]
     recent_orders: list[AdminOrderListItem]
+    period_metrics: list[AdminPeriodMetric]
+    delivery_metrics: list[AdminRateMetric]
+    order_funnel: list[AdminFunnelStep]
 
 
 class AdminOrderStatusUpdate(BaseModel):

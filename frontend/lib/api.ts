@@ -121,6 +121,26 @@ export interface AdminSheetSyncCount {
   count: number;
 }
 
+export interface AdminPeriodMetric {
+  key: string;
+  label: string;
+  orders: number;
+  revenue_mad: number;
+}
+
+export interface AdminRateMetric {
+  key: string;
+  label: string;
+  value: number;
+}
+
+export interface AdminFunnelStep {
+  key: string;
+  label: string;
+  count: number;
+  rate: number;
+}
+
 export interface AdminAnalytics {
   days: number;
   total_orders: number;
@@ -135,6 +155,9 @@ export interface AdminAnalytics {
   daily_revenue: AdminDailyRevenue[];
   top_cities: AdminCityCount[];
   recent_orders: AdminOrder[];
+  period_metrics: AdminPeriodMetric[];
+  delivery_metrics: AdminRateMetric[];
+  order_funnel: AdminFunnelStep[];
 }
 
 export async function createOrder(payload: CreateOrderPayload): Promise<Order> {

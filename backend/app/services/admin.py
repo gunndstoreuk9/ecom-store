@@ -12,12 +12,20 @@ from app.schemas.admin import (
     AdminAnalyticsResponse,
     AdminCityCount,
     AdminDailyRevenue,
+    AdminFunnelStep,
     AdminOrderItem,
     AdminOrderListItem,
     AdminOrdersResponse,
+    AdminPeriodMetric,
+    AdminRateMetric,
     AdminSheetSyncCount,
     AdminStatusCount,
 )
+
+DELIVERED_STATUSES = {"delivered"}
+RETURNED_STATUSES = {"returned", "refused"}
+CONFIRMED_STATUSES = {"confirmed", "packed", "shipped", "delivered", "returned", "refused"}
+CANCELLED_STATUSES = {"cancelled", "no_answer"}
 
 
 def list_admin_orders(
@@ -77,6 +85,9 @@ def get_admin_analytics(db: Session, *, days: int) -> AdminAnalyticsResponse:
             to_admin_order(order)
             for order in _orders_query(db).order_by(Order.created_at.desc()).limit(6).all()
         ],
+        period_metrics=_period_metrics(db, now),
+        delivery_metrics=_delivery_metrics(db, start_at),
+        order_funnel=_order_funnel(db, start_at),
     )
 
 
@@ -169,6 +180,97 @@ def _count_and_revenue(db: Session, start_at: datetime) -> tuple[int, int]:
         .one()
     )
     return int(orders or 0), int(revenue or 0)
+
+
+def _count_and_revenue_between(db: Session, start_at: datetime, end_at: datetime) -> tuple[int, int]:
+    orders, revenue = (
+        db.query(func.count(Order.id), func.coalesce(func.sum(Order.total_mad), 0))
+        .filter(Order.created_at >= start_at, Order.created_at <= end_at)
+        .one()
+    )
+    return int(orders or 0), int(revenue or 0)
+
+
+def _period_metrics(db: Session, now: datetime) -> list[AdminPeriodMetric]:
+    today_start = datetime.combine(now.date(), time.min, tzinfo=timezone.utc)
+    yesterday_start = today_start - timedelta(days=1)
+    yesterday_end = today_start - timedelta(microseconds=1)
+    month_start = datetime(now.year, now.month, 1, tzinfo=timezone.utc)
+    last_month_end = month_start - timedelta(microseconds=1)
+    last_month_start = datetime(last_month_end.year, last_month_end.month, 1, tzinfo=timezone.utc)
+    year_start = datetime(now.year, 1, 1, tzinfo=timezone.utc)
+    last_year_start = datetime(now.year - 1, 1, 1, tzinfo=timezone.utc)
+    last_year_end = year_start - timedelta(microseconds=1)
+
+    periods = [
+        ("today", "Today", today_start, now),
+        ("yesterday", "Yesterday", yesterday_start, yesterday_end),
+        ("last_2_days", "Last 2 Days", now - timedelta(days=2), now),
+        ("last_3_days", "Last 3 Days", now - timedelta(days=3), now),
+        ("last_4_days", "Last 4 Days", now - timedelta(days=4), now),
+        ("last_7_days", "Last 7 Days", now - timedelta(days=7), now),
+        ("last_15_days", "Last 15 Days", now - timedelta(days=15), now),
+        ("last_30_days", "Last 30 Days", now - timedelta(days=30), now),
+        ("last_60_days", "Last 60 Days", now - timedelta(days=60), now),
+        ("last_90_days", "Last 90 Days", now - timedelta(days=90), now),
+        ("last_180_days", "Last 180 Days", now - timedelta(days=180), now),
+        ("last_365_days", "Last 365 Days", now - timedelta(days=365), now),
+        ("this_month", "This Month", month_start, now),
+        ("last_month", "Last Month", last_month_start, last_month_end),
+        ("this_year", "This Year", year_start, now),
+        ("last_year", "Last Year", last_year_start, last_year_end),
+    ]
+    metrics = []
+    for key, label, start_at, end_at in periods:
+        orders, revenue = _count_and_revenue_between(db, start_at, end_at)
+        metrics.append(AdminPeriodMetric(key=key, label=label, orders=orders, revenue_mad=revenue))
+    return metrics
+
+
+def _delivery_metrics(db: Session, start_at: datetime) -> list[AdminRateMetric]:
+    total_orders = _status_count(db, start_at)
+    confirmed = _status_count(db, start_at, CONFIRMED_STATUSES)
+    shipped = _status_count(db, start_at, {"shipped", "delivered", "returned", "refused"})
+    delivered = _status_count(db, start_at, DELIVERED_STATUSES)
+    returned = _status_count(db, start_at, RETURNED_STATUSES)
+    cancelled = _status_count(db, start_at, CANCELLED_STATUSES)
+
+    return [
+        AdminRateMetric(key="delivery_rate", label="Delivery Rate", value=_percent(delivered, shipped)),
+        AdminRateMetric(key="return_rate", label="Return Rate", value=_percent(returned, shipped)),
+        AdminRateMetric(key="cancellation_rate", label="Cancellation Rate", value=_percent(cancelled, total_orders)),
+        AdminRateMetric(key="confirmation_rate", label="Confirmation Rate", value=_percent(confirmed, total_orders)),
+        AdminRateMetric(key="average_delivery_time", label="Average Delivery Time", value=0),
+    ]
+
+
+def _order_funnel(db: Session, start_at: datetime) -> list[AdminFunnelStep]:
+    total = _status_count(db, start_at)
+    confirmed = _status_count(db, start_at, CONFIRMED_STATUSES)
+    shipped = _status_count(db, start_at, {"shipped", "delivered", "returned", "refused"})
+    delivered = _status_count(db, start_at, DELIVERED_STATUSES)
+    paid = delivered
+    steps = [
+        ("orders", "Orders", total),
+        ("confirmed", "Confirmed", confirmed),
+        ("shipped", "Shipped", shipped),
+        ("delivered", "Delivered", delivered),
+        ("paid", "Paid", paid),
+    ]
+    return [AdminFunnelStep(key=key, label=label, count=count, rate=_percent(count, total)) for key, label, count in steps]
+
+
+def _status_count(db: Session, start_at: datetime, statuses: Optional[set[str]] = None) -> int:
+    query = db.query(func.count(Order.id)).filter(Order.created_at >= start_at)
+    if statuses:
+        query = query.filter(Order.status.in_(statuses))
+    return int(query.scalar() or 0)
+
+
+def _percent(value: int, total: int) -> float:
+    if not total:
+        return 0
+    return round((value / total) * 100, 1)
 
 
 def _status_breakdown(db: Session, start_at: datetime) -> list[AdminStatusCount]:
