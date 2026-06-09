@@ -23,9 +23,11 @@ export default function CollectionsPage() {
         <div className="mx-auto grid max-w-5xl gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
           <ProductImageSlot
             label="صورة المنتج"
-            filename="hero-bundle.webp"
+            filename="collections-offer.png"
             note="صورة الكور الرئيسي مع شارة الدفع عند الاستلام"
-            className="shadow-xl"
+            className="min-h-[320px] shadow-xl md:min-h-[420px]"
+            showImage
+            imageFit="cover"
           />
 
           <Link
