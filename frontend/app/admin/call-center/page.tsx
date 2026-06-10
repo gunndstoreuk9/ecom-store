@@ -14,7 +14,7 @@ import {
   updateAdminOrderCall,
 } from "@/lib/api";
 import { formatMad } from "@/lib/currency";
-import { DELIVERY_COMPANY, DIGYLOG_CITIES } from "@/config/digylog";
+import { DELIVERY_COMPANY, DIGYLOG_CITIES, DIGYLOG_FEE_BY_CITY } from "@/config/digylog";
 import { HERO_OFFERS } from "@/config/offers";
 
 type Lang = "en" | "ar";
@@ -558,9 +558,14 @@ function CallCard({
           <select value={city} onChange={(e) => setCity(e.target.value)} className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm font-bold outline-none focus:border-[#1E4A8C]">
             <option value="">{t("Select city", "اختر المدينة")}</option>
             {DIGYLOG_CITIES.map((c) => (
-              <option key={c} value={c}>{c}</option>
+              <option key={c} value={c}>
+                {c}{DIGYLOG_FEE_BY_CITY[c] ? ` — ${DIGYLOG_FEE_BY_CITY[c]} DH` : ""}
+              </option>
             ))}
           </select>
+          {city && DIGYLOG_FEE_BY_CITY[city] ? (
+            <p className="mt-1 text-[11px] font-bold text-[#16A34A]">{t("Delivery fee", "ثمن التوصيل")}: {DIGYLOG_FEE_BY_CITY[city]} DH</p>
+          ) : null}
         </div>
       </div>
 
