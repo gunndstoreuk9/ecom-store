@@ -10,6 +10,7 @@ import {
   dispatchOrders,
   editAdminOrder,
   getAdminOrders,
+  getAdminRole,
   getCallCenterStats,
   updateAdminOrderCall,
 } from "@/lib/api";
@@ -59,6 +60,7 @@ export default function CallCenterPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [role, setRole] = useState<"admin" | "call_center" | null>(null);
 
   const isArabic = lang === "ar";
   const t = (en: string, ar: string) => (isArabic ? ar : en);
@@ -82,9 +84,15 @@ export default function CallCenterPage() {
   }, [savedKey, tab]);
 
   useEffect(() => {
-    if (!savedKey) return;
+    if (!savedKey) {
+      setRole(null);
+      return;
+    }
     void loadStats(savedKey);
     void refreshCounts(savedKey);
+    getAdminRole(savedKey)
+      .then((r) => setRole(r.role))
+      .catch(() => setRole(null));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [savedKey]);
 
@@ -228,9 +236,11 @@ export default function CallCenterPage() {
       <header className="sticky top-0 z-40 bg-gradient-to-l from-[#0B1724] to-[#1E4A8C] text-white shadow-lg">
         <div className="mx-auto flex max-w-[1280px] flex-col gap-4 px-4 py-4 sm:px-6 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-center gap-3">
-            <Link href="/admin" className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/15 transition hover:bg-white/25">
-              <ArrowLeft className="h-5 w-5" />
-            </Link>
+            {role === "admin" && (
+              <Link href="/admin" className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/15 transition hover:bg-white/25">
+                <ArrowLeft className="h-5 w-5" />
+              </Link>
+            )}
             <div>
               <p className="text-xs font-black uppercase tracking-wide text-white/70">Tawazon · {DELIVERY_COMPANY}</p>
               <h1 className="text-xl font-black">{t("Call Center", "مركز الاتصال")}</h1>
