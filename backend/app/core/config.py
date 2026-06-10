@@ -26,7 +26,7 @@ class Settings(BaseSettings):
     digylog_network: int = Field(default=1, alias="DIGYLOG_NETWORK")
     digylog_store: str = Field(default="", alias="DIGYLOG_STORE")
     digylog_port: int = Field(default=2, alias="DIGYLOG_PORT")
-    digylog_add_status: int = Field(default=1, alias="DIGYLOG_ADD_STATUS")
+    digylog_add_status: int = Field(default=0, alias="DIGYLOG_ADD_STATUS")
     digylog_webhook_secret: str = Field(default="", alias="DIGYLOG_WEBHOOK_SECRET")
     meta_pixel_id: str = Field(default="", alias="META_PIXEL_ID")
     meta_capi_access_token: str = Field(default="", alias="META_CAPI_ACCESS_TOKEN")

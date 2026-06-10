@@ -26,7 +26,7 @@ services:
       DIGYLOG_STORE: ""
       DIGYLOG_NETWORK: "1"
       DIGYLOG_PORT: "2"
-      DIGYLOG_ADD_STATUS: "1"
+      DIGYLOG_ADD_STATUS: "0"
       DIGYLOG_WEBHOOK_SECRET: ""
       DIGYLOG_AUTH_HEADER: "Authorization"
       DIGYLOG_AUTH_PREFIX: "Bearer "
