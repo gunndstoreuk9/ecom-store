@@ -25,7 +25,7 @@ services:
       DIGYLOG_API_TOKEN: ""
       DIGYLOG_STORE: ""
       DIGYLOG_NETWORK: "1"
-      DIGYLOG_PORT: "2"
+      DIGYLOG_PORT: "1"
       DIGYLOG_ADD_STATUS: "0"
       DIGYLOG_WEBHOOK_SECRET: ""
       DIGYLOG_AUTH_HEADER: "Authorization"
