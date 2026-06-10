@@ -497,6 +497,17 @@ function CallCard({
         </div>
       </div>
 
+      {order.delivery_tracking ? (
+        <p className="mt-3 rounded-xl bg-emerald-50 px-3 py-2 text-xs font-black text-emerald-700">
+          {t("Sent to", "تسيفط لـ")} {order.delivery_company || DELIVERY_COMPANY} · {order.delivery_tracking}
+        </p>
+      ) : null}
+      {order.delivery_error ? (
+        <p className="mt-3 rounded-xl bg-red-50 px-3 py-2 text-xs font-black text-red-700">
+          {t("Dispatch failed", "فشل الإرسال")}: {order.delivery_error}
+        </p>
+      ) : null}
+
       <div className="mt-4 flex gap-2">
         <a href={`tel:${order.phone_e164}`} className="flex flex-1 items-center justify-center gap-2 rounded-full bg-[#1E4A8C] px-4 py-2.5 text-sm font-black text-white transition hover:bg-[#173B70]">
           <Phone className="h-4 w-4" />

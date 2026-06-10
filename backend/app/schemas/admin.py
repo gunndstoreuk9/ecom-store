@@ -66,6 +66,8 @@ class AdminOrderListItem(BaseModel):
     call_attempts: int = 0
     delivery_company: Optional[str] = None
     delivery_city: Optional[str] = None
+    delivery_tracking: Optional[str] = None
+    delivery_error: Optional[str] = None
     hero_sku: str
     hero_qty: int
     total_mad: int

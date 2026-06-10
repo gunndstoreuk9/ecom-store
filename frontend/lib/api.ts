@@ -100,6 +100,8 @@ export interface AdminOrder {
   call_attempts: number;
   delivery_company?: string | null;
   delivery_city?: string | null;
+  delivery_tracking?: string | null;
+  delivery_error?: string | null;
   hero_sku: string;
   hero_qty: number;
   total_mad: number;

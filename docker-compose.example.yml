@@ -20,6 +20,11 @@ services:
       CORS_ORIGINS: http://localhost:3000
       DATABASE_URL: postgresql+psycopg://tawazonhealth:tawazonhealth@postgres:5432/tawazonhealth
       SHEETS_WEBHOOK_URL: ""
+      ADMIN_API_KEY: "change-this-secure-admin-key"
+      DIGYLOG_API_URL: ""
+      DIGYLOG_API_TOKEN: ""
+      DIGYLOG_AUTH_HEADER: "Authorization"
+      DIGYLOG_AUTH_PREFIX: "Bearer "
       LOG_LEVEL: INFO
     ports:
       - "8000:8000"

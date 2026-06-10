@@ -7,7 +7,9 @@ from uuid import UUID
 from sqlalchemy import case, func, or_
 from sqlalchemy.orm import Session, selectinload
 
+from app.core.config import get_settings
 from app.models.order import Order, OrderItem
+from app.services.digylog import DigylogError, push_order_to_digylog
 from app.schemas.admin import (
     CALL_STATUS_TO_ORDER_STATUS,
     RETRY_CALL_STATUSES,
@@ -220,10 +222,21 @@ def dispatch_orders(
         return AdminDispatchResponse(updated=0, orders=[])
 
     orders = db.query(Order).options(selectinload(Order.items)).filter(Order.id.in_(uuids)).all()
+    settings = get_settings()
     for order in orders:
-        order.status = new_status
         if delivery_company:
             order.delivery_company = delivery_company
+        if settings.digylog_enabled:
+            try:
+                tracking = push_order_to_digylog(order)
+                order.delivery_tracking = tracking
+                order.delivery_error = None
+                order.status = new_status
+            except DigylogError as exc:
+                order.delivery_error = str(exc)
+                # keep status as-is so the agent can retry the failed dispatch
+        else:
+            order.status = new_status
     db.commit()
     for order in orders:
         db.refresh(order)
@@ -301,6 +314,8 @@ def to_admin_order(order: Order) -> AdminOrderListItem:
         address=order.address,
         call_status=order.call_status,
         call_note=order.call_note,
+        delivery_tracking=order.delivery_tracking,
+        delivery_error=order.delivery_error,
         call_attempts=order.call_attempts or 0,
         delivery_company=order.delivery_company,
         delivery_city=order.delivery_city,

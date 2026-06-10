@@ -30,6 +30,8 @@ class Order(Base):
     call_attempts: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     delivery_company: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
     delivery_city: Mapped[Optional[str]] = mapped_column(String(120), nullable=True)
+    delivery_tracking: Mapped[Optional[str]] = mapped_column(String(120), nullable=True)
+    delivery_error: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     hero_sku: Mapped[str] = mapped_column(String(120))
     hero_qty: Mapped[int] = mapped_column(Integer)
     hero_price_mad: Mapped[int] = mapped_column(Integer)

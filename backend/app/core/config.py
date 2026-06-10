@@ -17,6 +17,11 @@ class Settings(BaseSettings):
     )
     sheets_webhook_url: str = Field(default="", alias="SHEETS_WEBHOOK_URL")
     admin_api_key: str = Field(default="", alias="ADMIN_API_KEY")
+    # Digylog delivery API (optional). When configured, confirmed orders are pushed on dispatch.
+    digylog_api_url: str = Field(default="", alias="DIGYLOG_API_URL")
+    digylog_api_token: str = Field(default="", alias="DIGYLOG_API_TOKEN")
+    digylog_auth_header: str = Field(default="Authorization", alias="DIGYLOG_AUTH_HEADER")
+    digylog_auth_prefix: str = Field(default="Bearer ", alias="DIGYLOG_AUTH_PREFIX")
     meta_pixel_id: str = Field(default="", alias="META_PIXEL_ID")
     meta_capi_access_token: str = Field(default="", alias="META_CAPI_ACCESS_TOKEN")
     meta_test_event_code: str = Field(default="", alias="META_TEST_EVENT_CODE")
@@ -40,6 +45,10 @@ class Settings(BaseSettings):
     @property
     def allowed_origins(self) -> list[str]:
         return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
+
+    @property
+    def digylog_enabled(self) -> bool:
+        return bool(self.digylog_api_url)
 
 
 @lru_cache
