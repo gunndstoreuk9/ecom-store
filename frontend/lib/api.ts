@@ -237,6 +237,12 @@ export async function getOrder(orderId: string): Promise<Order> {
   return api<Order>(`/v1/orders/${orderId}`);
 }
 
+export async function getAdminRole(adminKey: string): Promise<{ role: "admin" | "call_center" }> {
+  return api<{ role: "admin" | "call_center" }>(`/v1/admin/me`, {
+    headers: { "X-Admin-Key": adminKey },
+  });
+}
+
 export async function getAdminAnalytics(adminKey: string, days = 30): Promise<AdminAnalytics> {
   return api<AdminAnalytics>(`/v1/admin/analytics?days=${days}`, {
     headers: { "X-Admin-Key": adminKey },

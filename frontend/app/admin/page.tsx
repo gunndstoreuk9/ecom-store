@@ -164,10 +164,16 @@ export default function AdminDashboardPage() {
       setAnalytics(analyticsResult);
       setOrdersData(ordersResult);
     } catch (err) {
-      setError(errorMessage(err, lang));
-      if (err instanceof ApiError && err.status === 401) {
+      if (err instanceof ApiError && err.status === 403) {
+        setError(t("This key is for the call center only. Open the Call Center page.", "هاد المفتاح خاص بالـ call center فقط. دخل لصفحة Call Center."));
         window.localStorage.removeItem(ADMIN_KEY_STORAGE);
         setSavedKey("");
+      } else {
+        setError(errorMessage(err, lang));
+        if (err instanceof ApiError && err.status === 401) {
+          window.localStorage.removeItem(ADMIN_KEY_STORAGE);
+          setSavedKey("");
+        }
       }
     } finally {
       setLoading(false);

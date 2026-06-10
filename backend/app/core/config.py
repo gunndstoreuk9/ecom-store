@@ -17,6 +17,7 @@ class Settings(BaseSettings):
     )
     sheets_webhook_url: str = Field(default="", alias="SHEETS_WEBHOOK_URL")
     admin_api_key: str = Field(default="", alias="ADMIN_API_KEY")
+    call_center_api_key: str = Field(default="", alias="CALL_CENTER_API_KEY")
     # Digylog delivery API (optional). Set DIGYLOG_API_TOKEN to enable pushing orders on dispatch.
     digylog_api_url: str = Field(default="https://api.digylog.com/api/v2/seller/orders", alias="DIGYLOG_API_URL")
     digylog_api_token: str = Field(default="", alias="DIGYLOG_API_TOKEN")

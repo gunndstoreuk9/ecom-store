@@ -9,7 +9,7 @@ from pydantic import BaseModel, ValidationError
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.core.security import require_admin_key
+from app.core.security import require_admin_key, require_call_center_key, resolve_role
 from app.schemas.admin import (
     AdminAnalyticsResponse,
     AdminCallCenterStats,
@@ -31,9 +31,14 @@ from app.services.admin import (
     update_admin_order_status,
 )
 
-router = APIRouter(prefix="/admin", tags=["admin"], dependencies=[Depends(require_admin_key)])
+router = APIRouter(prefix="/admin", tags=["admin"])
 
 ModelT = TypeVar("ModelT", bound=BaseModel)
+
+
+@router.get("/me")
+def admin_me(role: str = Depends(resolve_role)) -> dict:
+    return {"role": role}
 
 
 async def _parse_body(request: Request, model: Type[ModelT]) -> ModelT:
@@ -56,7 +61,7 @@ async def _parse_body(request: Request, model: Type[ModelT]) -> ModelT:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=errors)
 
 
-@router.get("/analytics", response_model=AdminAnalyticsResponse)
+@router.get("/analytics", response_model=AdminAnalyticsResponse, dependencies=[Depends(require_admin_key)])
 def admin_analytics(
     days: int = Query(default=30, ge=1, le=365),
     db: Session = Depends(get_db),
@@ -64,7 +69,7 @@ def admin_analytics(
     return get_admin_analytics(db, days=days)
 
 
-@router.get("/orders", response_model=AdminOrdersResponse)
+@router.get("/orders", response_model=AdminOrdersResponse, dependencies=[Depends(require_call_center_key)])
 def admin_orders(
     limit: int = Query(default=50, ge=1, le=500),
     offset: int = Query(default=0, ge=0),
@@ -91,7 +96,7 @@ def admin_orders(
     )
 
 
-@router.patch("/orders/{order_id}/status", response_model=AdminOrderListItem)
+@router.patch("/orders/{order_id}/status", response_model=AdminOrderListItem, dependencies=[Depends(require_call_center_key)])
 async def admin_update_order_status(
     order_id: str,
     request: Request,
@@ -104,7 +109,7 @@ async def admin_update_order_status(
     return order
 
 
-@router.patch("/orders/{order_id}/call", response_model=AdminOrderListItem)
+@router.patch("/orders/{order_id}/call", response_model=AdminOrderListItem, dependencies=[Depends(require_call_center_key)])
 async def admin_update_order_call(
     order_id: str,
     request: Request,
@@ -124,7 +129,7 @@ async def admin_update_order_call(
     return order
 
 
-@router.patch("/orders/{order_id}/details", response_model=AdminOrderListItem)
+@router.patch("/orders/{order_id}/details", response_model=AdminOrderListItem, dependencies=[Depends(require_call_center_key)])
 async def admin_update_order_details(
     order_id: str,
     request: Request,
@@ -146,12 +151,12 @@ async def admin_update_order_details(
     return order
 
 
-@router.get("/call-center/stats", response_model=AdminCallCenterStats)
+@router.get("/call-center/stats", response_model=AdminCallCenterStats, dependencies=[Depends(require_call_center_key)])
 def admin_call_center_stats(db: Session = Depends(get_db)) -> AdminCallCenterStats:
     return get_call_center_stats(db)
 
 
-@router.post("/dispatch", response_model=AdminDispatchResponse)
+@router.post("/dispatch", response_model=AdminDispatchResponse, dependencies=[Depends(require_call_center_key)])
 async def admin_dispatch_orders(
     request: Request,
     db: Session = Depends(get_db),
