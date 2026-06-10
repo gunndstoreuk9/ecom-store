@@ -641,13 +641,22 @@ const DESTINATIONS: DigylogDestination[] = RAW_DIGYLOG.split("\n")
 
 export const DIGYLOG_DESTINATIONS = DESTINATIONS;
 
-// Unique, sorted city names for the delivery city selector.
-export const DIGYLOG_CITIES = Array.from(new Set(DESTINATIONS.map((d) => d.city))).sort((a, b) =>
+// Remove hub/region hints written between parentheses so we keep a clean city name.
+export function cleanCityName(name: string): string {
+  return name
+    .replace(/\s*\([^)]*\)\s*/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+// Unique, sorted, clean city names for the delivery city selector.
+export const DIGYLOG_CITIES = Array.from(new Set(DESTINATIONS.map((d) => cleanCityName(d.city)))).sort((a, b) =>
   a.localeCompare(b, "fr")
 );
 
-// Quick lookup of the delivery fee by exact city name.
+// Quick lookup of the delivery fee by clean city name (first match wins).
 export const DIGYLOG_FEE_BY_CITY: Record<string, number> = DESTINATIONS.reduce<Record<string, number>>((acc, d) => {
-  if (!(d.city in acc)) acc[d.city] = d.fee;
+  const key = cleanCityName(d.city);
+  if (!(key in acc)) acc[key] = d.fee;
   return acc;
 }, {});

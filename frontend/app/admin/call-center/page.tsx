@@ -14,7 +14,7 @@ import {
   updateAdminOrderCall,
 } from "@/lib/api";
 import { formatMad } from "@/lib/currency";
-import { DELIVERY_COMPANY, DIGYLOG_CITIES, DIGYLOG_FEE_BY_CITY } from "@/config/digylog";
+import { DELIVERY_COMPANY, DIGYLOG_CITIES, cleanCityName } from "@/config/digylog";
 import { HERO_OFFERS } from "@/config/offers";
 
 type Lang = "en" | "ar";
@@ -555,17 +555,7 @@ function CallCard({
             <Truck className="h-3.5 w-3.5" />
             {t(`${DELIVERY_COMPANY} city`, `مدينة ${DELIVERY_COMPANY}`)}
           </label>
-          <select value={city} onChange={(e) => setCity(e.target.value)} className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm font-bold outline-none focus:border-[#1E4A8C]">
-            <option value="">{t("Select city", "اختر المدينة")}</option>
-            {DIGYLOG_CITIES.map((c) => (
-              <option key={c} value={c}>
-                {c}{DIGYLOG_FEE_BY_CITY[c] ? ` — ${DIGYLOG_FEE_BY_CITY[c]} DH` : ""}
-              </option>
-            ))}
-          </select>
-          {city && DIGYLOG_FEE_BY_CITY[city] ? (
-            <p className="mt-1 text-[11px] font-bold text-[#16A34A]">{t("Delivery fee", "ثمن التوصيل")}: {DIGYLOG_FEE_BY_CITY[city]} DH</p>
-          ) : null}
+          <CitySelect value={city} onChange={setCity} lang={lang} />
         </div>
       </div>
 
@@ -628,8 +618,66 @@ function periodAr(key: string) {
 
 function matchCity(value?: string | null) {
   if (!value) return "";
-  const found = DIGYLOG_CITIES.find((c) => c.toLowerCase() === value.trim().toLowerCase());
+  const needle = cleanCityName(value).toLowerCase();
+  const found = DIGYLOG_CITIES.find((c) => c.toLowerCase() === needle);
   return found ?? "";
+}
+
+function CitySelect({ value, onChange, lang }: { value: string; onChange: (city: string) => void; lang: Lang }) {
+  const isArabic = lang === "ar";
+  const t = (en: string, ar: string) => (isArabic ? ar : en);
+  const [query, setQuery] = useState(value);
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    setQuery(value);
+  }, [value]);
+
+  const matches = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    const list = needle ? DIGYLOG_CITIES.filter((c) => c.toLowerCase().includes(needle)) : DIGYLOG_CITIES;
+    return list.slice(0, 30);
+  }, [query]);
+
+  return (
+    <div className="relative">
+      <input
+        value={query}
+        onChange={(e) => {
+          setQuery(e.target.value);
+          setOpen(true);
+        }}
+        onFocus={() => setOpen(true)}
+        onBlur={() => setTimeout(() => setOpen(false), 150)}
+        placeholder={t("Type a city...", "كتب اسم المدينة...")}
+        className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm font-bold outline-none focus:border-[#1E4A8C]"
+      />
+      {open ? (
+        <ul className="absolute z-30 mt-1 max-h-56 w-full overflow-auto rounded-xl border border-gray-200 bg-white shadow-lg">
+          {matches.length ? (
+            matches.map((c) => (
+              <li key={c}>
+                <button
+                  type="button"
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    onChange(c);
+                    setQuery(c);
+                    setOpen(false);
+                  }}
+                  className={`block w-full px-3 py-2 text-start text-sm font-semibold transition hover:bg-[#EEF5FF] ${c === value ? "bg-[#EEF5FF] text-[#1E4A8C]" : "text-[#102033]"}`}
+                >
+                  {c}
+                </button>
+              </li>
+            ))
+          ) : (
+            <li className="px-3 py-2 text-sm font-semibold text-[#94A3B8]">{t("No match", "ماكاينة")}</li>
+          )}
+        </ul>
+      ) : null}
+    </div>
+  );
 }
 
 function csvCell(value: string | number) {
