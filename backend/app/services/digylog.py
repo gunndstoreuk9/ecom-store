@@ -55,6 +55,8 @@ def push_order_to_digylog(order: Order) -> Optional[str]:
         raise DigylogError("Digylog API not configured")
 
     headers = {"Content-Type": "application/json", "Accept": "application/json"}
+    if settings.digylog_referer:
+        headers["Referer"] = settings.digylog_referer
     if settings.digylog_api_token:
         headers[settings.digylog_auth_header] = f"{settings.digylog_auth_prefix}{settings.digylog_api_token}"
 

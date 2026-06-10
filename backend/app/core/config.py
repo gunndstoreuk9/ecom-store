@@ -22,6 +22,7 @@ class Settings(BaseSettings):
     digylog_api_token: str = Field(default="", alias="DIGYLOG_API_TOKEN")
     digylog_auth_header: str = Field(default="Authorization", alias="DIGYLOG_AUTH_HEADER")
     digylog_auth_prefix: str = Field(default="Bearer ", alias="DIGYLOG_AUTH_PREFIX")
+    digylog_referer: str = Field(default="https://apiseller.digylog.com", alias="DIGYLOG_REFERER")
     meta_pixel_id: str = Field(default="", alias="META_PIXEL_ID")
     meta_capi_access_token: str = Field(default="", alias="META_CAPI_ACCESS_TOKEN")
     meta_test_event_code: str = Field(default="", alias="META_TEST_EVENT_CODE")

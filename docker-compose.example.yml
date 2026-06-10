@@ -25,6 +25,7 @@ services:
       DIGYLOG_API_TOKEN: ""
       DIGYLOG_AUTH_HEADER: "Authorization"
       DIGYLOG_AUTH_PREFIX: "Bearer "
+      DIGYLOG_REFERER: "https://apiseller.digylog.com"
       LOG_LEVEL: INFO
     ports:
       - "8000:8000"
