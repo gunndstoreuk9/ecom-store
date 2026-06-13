@@ -282,7 +282,7 @@ export default function CallCenterPage() {
         </div>
       </header>
 
-      {role === "admin" ? <PayoutPanel adminKey={currentKey} lang={lang} version={payoutVersion} /> : null}
+      {role ? <PayoutPanel adminKey={currentKey} lang={lang} version={payoutVersion} readOnly={role !== "admin"} /> : null}
 
       {showStats && stats ? <StatsPanel stats={stats} lang={lang} /> : null}
 
@@ -377,7 +377,7 @@ export default function CallCenterPage() {
   );
 }
 
-function PayoutPanel({ adminKey, lang, version }: { adminKey: string; lang: Lang; version: number }) {
+function PayoutPanel({ adminKey, lang, version, readOnly = false }: { adminKey: string; lang: Lang; version: number; readOnly?: boolean }) {
   const isArabic = lang === "ar";
   const t = (en: string, ar: string) => (isArabic ? ar : en);
   const [data, setData] = useState<ConfirmationPayout | null>(null);
@@ -512,7 +512,7 @@ function PayoutPanel({ adminKey, lang, version }: { adminKey: string; lang: Lang
             {t("Last Reset", "آخر تصفية")}: <span className="font-black text-white/90">{lastReset}</span>
           </span>
           <div className="ms-auto flex flex-wrap items-center gap-2">
-            {editing ? (
+            {!readOnly && editing ? (
               <>
                 <button onClick={() => void saveEdit()} disabled={busy} className="rounded-full bg-emerald-500 px-4 py-1.5 text-xs font-black disabled:opacity-50">
                   {t("Save", "حفظ")}
@@ -521,20 +521,22 @@ function PayoutPanel({ adminKey, lang, version }: { adminKey: string; lang: Lang
                   {t("Cancel", "إلغاء")}
                 </button>
               </>
-            ) : (
+            ) : !readOnly ? (
               <button onClick={() => setEditing(true)} className="flex items-center gap-1.5 rounded-full bg-white/15 px-4 py-1.5 text-xs font-black hover:bg-white/25">
                 <Pencil className="h-3.5 w-3.5" />
                 {t("Edit Amount", "تعديل المبلغ")}
               </button>
-            )}
+            ) : null}
             <button onClick={() => void toggleDetails()} className="flex items-center gap-1.5 rounded-full bg-white/15 px-4 py-1.5 text-xs font-black hover:bg-white/25">
               <ListChecks className="h-3.5 w-3.5" />
               {t("Calculation Details", "تفاصيل الحساب")}
             </button>
-            <button onClick={() => setPinOpen((v) => !v)} className="flex items-center gap-1.5 rounded-full bg-rose-500 px-4 py-1.5 text-xs font-black hover:bg-rose-600">
-              <RotateCcw className="h-3.5 w-3.5" />
-              {t("Mark as Paid & Reset", "تسجيل كمدفوع وتصفية")}
-            </button>
+            {!readOnly ? (
+              <button onClick={() => setPinOpen((v) => !v)} className="flex items-center gap-1.5 rounded-full bg-rose-500 px-4 py-1.5 text-xs font-black hover:bg-rose-600">
+                <RotateCcw className="h-3.5 w-3.5" />
+                {t("Mark as Paid & Reset", "تسجيل كمدفوع وتصفية")}
+              </button>
+            ) : null}
           </div>
         </div>
 

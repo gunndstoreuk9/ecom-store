@@ -174,7 +174,7 @@ async def admin_dispatch_orders(
     )
 
 
-@router.get("/confirmation-payouts", response_model=ConfirmationPayoutResponse, dependencies=[Depends(require_admin_key)])
+@router.get("/confirmation-payouts", response_model=ConfirmationPayoutResponse, dependencies=[Depends(require_call_center_key)])
 def admin_confirmation_payouts(
     details: bool = Query(default=False),
     db: Session = Depends(get_db),
