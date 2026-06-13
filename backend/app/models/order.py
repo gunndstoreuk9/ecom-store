@@ -32,6 +32,7 @@ class Order(Base):
     delivery_city: Mapped[Optional[str]] = mapped_column(String(120), nullable=True)
     delivery_tracking: Mapped[Optional[str]] = mapped_column(String(120), nullable=True)
     delivery_error: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    dispatched_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True, index=True)
     hero_sku: Mapped[str] = mapped_column(String(120))
     hero_qty: Mapped[int] = mapped_column(Integer)
     hero_price_mad: Mapped[int] = mapped_column(Integer)

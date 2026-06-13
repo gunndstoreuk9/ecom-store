@@ -2,16 +2,20 @@
 
 import Link from "next/link";
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { ArrowLeft, Phone, RefreshCw, Truck, Download, Send, BarChart3 } from "lucide-react";
+import { ArrowLeft, Phone, RefreshCw, Truck, Download, Send, BarChart3, Wallet, Pencil, RotateCcw, Lock, ListChecks } from "lucide-react";
 import {
   AdminCallCenterStats,
   AdminOrder,
   ApiError,
+  ConfirmationPayout,
   dispatchOrders,
   editAdminOrder,
   getAdminOrders,
   getAdminRole,
   getCallCenterStats,
+  getConfirmationPayout,
+  resetConfirmationPayout,
+  updateConfirmationPayout,
   updateAdminOrderCall,
 } from "@/lib/api";
 import { formatMad } from "@/lib/currency";
@@ -61,6 +65,7 @@ export default function CallCenterPage() {
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [role, setRole] = useState<"admin" | "call_center" | null>(null);
+  const [payoutVersion, setPayoutVersion] = useState(0);
 
   const isArabic = lang === "ar";
   const t = (en: string, ar: string) => (isArabic ? ar : en);
@@ -179,6 +184,7 @@ export default function CallCenterPage() {
       setSelected(new Set());
       void loadStats();
       void refreshCounts();
+      setPayoutVersion((v) => v + 1);
     } catch (err) {
       setError(errorMessage(err, lang));
     } finally {
@@ -276,6 +282,8 @@ export default function CallCenterPage() {
         </div>
       </header>
 
+      {role === "admin" ? <PayoutPanel adminKey={currentKey} lang={lang} version={payoutVersion} /> : null}
+
       {showStats && stats ? <StatsPanel stats={stats} lang={lang} /> : null}
 
       <div className="border-b border-gray-200 bg-white">
@@ -366,6 +374,223 @@ export default function CallCenterPage() {
         ) : null}
       </main>
     </section>
+  );
+}
+
+function PayoutPanel({ adminKey, lang, version }: { adminKey: string; lang: Lang; version: number }) {
+  const isArabic = lang === "ar";
+  const t = (en: string, ar: string) => (isArabic ? ar : en);
+  const [data, setData] = useState<ConfirmationPayout | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [commission, setCommission] = useState("5");
+  const [adjustment, setAdjustment] = useState("0");
+  const [showDetails, setShowDetails] = useState(false);
+  const [details, setDetails] = useState<ConfirmationPayout["details"]>(null);
+  const [pinOpen, setPinOpen] = useState(false);
+  const [pin, setPin] = useState("");
+
+  useEffect(() => {
+    if (!adminKey) return;
+    getConfirmationPayout(adminKey)
+      .then((d) => {
+        setData(d);
+        setCommission(String(d.commission_per_order));
+        setAdjustment(String(d.manual_adjustment_mad));
+      })
+      .catch((err) => setError(errorMessage(err, lang)));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [adminKey, version]);
+
+  async function saveEdit() {
+    setBusy(true);
+    setError(null);
+    try {
+      const updated = await updateConfirmationPayout(adminKey, {
+        commission_per_order: Number(commission) || 0,
+        manual_adjustment_mad: Number(adjustment) || 0,
+      });
+      setData(updated);
+      setEditing(false);
+    } catch (err) {
+      setError(errorMessage(err, lang));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function toggleDetails() {
+    const next = !showDetails;
+    setShowDetails(next);
+    if (next && !details) {
+      try {
+        const d = await getConfirmationPayout(adminKey, true);
+        setDetails(d.details ?? []);
+      } catch (err) {
+        setError(errorMessage(err, lang));
+      }
+    }
+  }
+
+  async function doReset() {
+    setBusy(true);
+    setError(null);
+    try {
+      const updated = await resetConfirmationPayout(adminKey, pin);
+      setData(updated);
+      setCommission(String(updated.commission_per_order));
+      setAdjustment(String(updated.manual_adjustment_mad));
+      setDetails(null);
+      setShowDetails(false);
+      setPinOpen(false);
+      setPin("");
+    } catch (err) {
+      setError(errorMessage(err, lang));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const lastReset = data?.last_reset_at ? data.last_reset_at.slice(0, 10) : "—";
+  const isPaid = data?.status === "paid";
+
+  return (
+    <div className="border-b border-[#11233c] bg-gradient-to-l from-[#0B1724] to-[#12325f] text-white">
+      <div className="mx-auto max-w-[1280px] px-4 py-4 sm:px-6">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <Wallet className="h-5 w-5 text-amber-300" />
+            <h2 className="text-base font-black">{t("Confirmation Team Payments", "مستحقات فريق التأكيد")}</h2>
+          </div>
+          <span
+            className={`rounded-full px-3 py-1 text-xs font-black ${
+              isPaid ? "bg-emerald-500/20 text-emerald-300" : "bg-amber-500/20 text-amber-300"
+            }`}
+          >
+            {isPaid ? t("Paid", "مدفوع") : t("Unpaid", "غير مدفوع")}
+          </span>
+        </div>
+
+        <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div className="rounded-2xl bg-white/10 p-3">
+            <p className="text-[10px] font-black uppercase tracking-wide text-white/60">{t("Confirmed & Sent Orders", "طلبات مؤكدة ومرسلة")}</p>
+            <p className="mt-1 text-2xl font-black">{(data?.orders_count ?? 0).toLocaleString()}</p>
+          </div>
+          <div className="rounded-2xl bg-white/10 p-3">
+            <p className="text-[10px] font-black uppercase tracking-wide text-white/60">{t("Commission / Order", "العمولة / طلب")}</p>
+            {editing ? (
+              <input
+                value={commission}
+                onChange={(e) => setCommission(e.target.value.replace(/[^0-9]/g, ""))}
+                className="mt-1 w-full rounded-lg bg-white/90 px-2 py-1 text-lg font-black text-[#102033] outline-none"
+              />
+            ) : (
+              <p className="mt-1 text-2xl font-black">{data?.commission_per_order ?? 5} <span className="text-sm">MAD</span></p>
+            )}
+          </div>
+          <div className="rounded-2xl bg-white/10 p-3">
+            <p className="text-[10px] font-black uppercase tracking-wide text-white/60">{t("Manual Adjustment", "تعديل يدوي")}</p>
+            {editing ? (
+              <input
+                value={adjustment}
+                onChange={(e) => setAdjustment(e.target.value.replace(/[^0-9-]/g, ""))}
+                className="mt-1 w-full rounded-lg bg-white/90 px-2 py-1 text-lg font-black text-[#102033] outline-none"
+              />
+            ) : (
+              <p className="mt-1 text-2xl font-black">{(data?.manual_adjustment_mad ?? 0).toLocaleString()} <span className="text-sm">MAD</span></p>
+            )}
+          </div>
+          <div className="rounded-2xl bg-amber-400/15 p-3 ring-1 ring-amber-300/30">
+            <p className="text-[10px] font-black uppercase tracking-wide text-amber-200">{t("Total Due", "المجموع المستحق")}</p>
+            <p className="mt-1 text-2xl font-black text-amber-300">{formatMad(data?.total_due_mad ?? 0)}</p>
+          </div>
+        </div>
+
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <span className="text-xs font-bold text-white/60">
+            {t("Last Reset", "آخر تصفية")}: <span className="font-black text-white/90">{lastReset}</span>
+          </span>
+          <div className="ms-auto flex flex-wrap items-center gap-2">
+            {editing ? (
+              <>
+                <button onClick={() => void saveEdit()} disabled={busy} className="rounded-full bg-emerald-500 px-4 py-1.5 text-xs font-black disabled:opacity-50">
+                  {t("Save", "حفظ")}
+                </button>
+                <button onClick={() => { setEditing(false); setCommission(String(data?.commission_per_order ?? 5)); setAdjustment(String(data?.manual_adjustment_mad ?? 0)); }} className="rounded-full bg-white/15 px-4 py-1.5 text-xs font-black">
+                  {t("Cancel", "إلغاء")}
+                </button>
+              </>
+            ) : (
+              <button onClick={() => setEditing(true)} className="flex items-center gap-1.5 rounded-full bg-white/15 px-4 py-1.5 text-xs font-black hover:bg-white/25">
+                <Pencil className="h-3.5 w-3.5" />
+                {t("Edit Amount", "تعديل المبلغ")}
+              </button>
+            )}
+            <button onClick={() => void toggleDetails()} className="flex items-center gap-1.5 rounded-full bg-white/15 px-4 py-1.5 text-xs font-black hover:bg-white/25">
+              <ListChecks className="h-3.5 w-3.5" />
+              {t("Calculation Details", "تفاصيل الحساب")}
+            </button>
+            <button onClick={() => setPinOpen((v) => !v)} className="flex items-center gap-1.5 rounded-full bg-rose-500 px-4 py-1.5 text-xs font-black hover:bg-rose-600">
+              <RotateCcw className="h-3.5 w-3.5" />
+              {t("Mark as Paid & Reset", "تسجيل كمدفوع وتصفية")}
+            </button>
+          </div>
+        </div>
+
+        {pinOpen ? (
+          <div className="mt-3 flex flex-wrap items-center gap-2 rounded-2xl bg-black/30 p-3">
+            <Lock className="h-4 w-4 text-amber-300" />
+            <span className="text-xs font-bold text-white/80">{t("Enter admin PIN to confirm reset", "دخل رمز الأدمين لتأكيد التصفية")}</span>
+            <input
+              type="password"
+              value={pin}
+              onChange={(e) => setPin(e.target.value)}
+              placeholder="PIN"
+              className="rounded-lg bg-white/90 px-3 py-1.5 text-sm font-black text-[#102033] outline-none"
+            />
+            <button onClick={() => void doReset()} disabled={busy || !pin} className="rounded-full bg-rose-500 px-4 py-1.5 text-xs font-black disabled:opacity-50">
+              {t("Confirm Reset", "تأكيد التصفية")}
+            </button>
+            <button onClick={() => { setPinOpen(false); setPin(""); }} className="rounded-full bg-white/15 px-4 py-1.5 text-xs font-black">
+              {t("Cancel", "إلغاء")}
+            </button>
+          </div>
+        ) : null}
+
+        {error ? <p className="mt-2 rounded-xl bg-rose-500/20 px-3 py-2 text-xs font-bold text-rose-200">{error}</p> : null}
+
+        {showDetails ? (
+          <div className="mt-3 max-h-64 overflow-auto rounded-2xl bg-white/5">
+            <table className="w-full text-xs">
+              <thead className="sticky top-0 bg-[#0B1724] text-white/60">
+                <tr>
+                  <th className="px-3 py-2 text-start font-black">{t("Order", "الطلب")}</th>
+                  <th className="px-3 py-2 text-start font-black">{t("Customer", "الزبون")}</th>
+                  <th className="px-3 py-2 text-start font-black">{t("Sent", "أُرسل")}</th>
+                  <th className="px-3 py-2 text-end font-black">{t("Commission", "العمولة")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(details ?? []).map((d) => (
+                  <tr key={d.order_id} className="border-t border-white/10">
+                    <td className="px-3 py-2 font-bold">{d.public_order_number}</td>
+                    <td className="px-3 py-2">{d.customer_name}</td>
+                    <td className="px-3 py-2 text-white/70">{d.dispatched_at ? d.dispatched_at.slice(0, 10) : "—"}</td>
+                    <td className="px-3 py-2 text-end font-black text-amber-300">{d.commission_mad} MAD</td>
+                  </tr>
+                ))}
+                {details && !details.length ? (
+                  <tr>
+                    <td colSpan={4} className="px-3 py-4 text-center text-white/60">{t("No orders since last reset.", "ماكاين حتى طلب من آخر تصفية.")}</td>
+                  </tr>
+                ) : null}
+              </tbody>
+            </table>
+          </div>
+        ) : null}
+      </div>
+    </div>
   );
 }
 

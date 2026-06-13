@@ -223,6 +223,7 @@ def dispatch_orders(
 
     orders = db.query(Order).options(selectinload(Order.items)).filter(Order.id.in_(uuids)).all()
     settings = get_settings()
+    now = datetime.now(timezone.utc)
     for order in orders:
         if delivery_company:
             order.delivery_company = delivery_company
@@ -232,11 +233,15 @@ def dispatch_orders(
                 order.delivery_tracking = tracking
                 order.delivery_error = None
                 order.status = new_status
+                if order.dispatched_at is None:
+                    order.dispatched_at = now
             except DigylogError as exc:
                 order.delivery_error = str(exc)
                 # keep status as-is so the agent can retry the failed dispatch
         else:
             order.status = new_status
+            if order.dispatched_at is None:
+                order.dispatched_at = now
     db.commit()
     for order in orders:
         db.refresh(order)

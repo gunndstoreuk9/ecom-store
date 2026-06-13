@@ -156,6 +156,26 @@ export interface AdminDispatchResponse {
   orders: AdminOrder[];
 }
 
+export interface ConfirmationPayoutDetailItem {
+  order_id: string;
+  public_order_number: string;
+  customer_name: string;
+  total_mad: number;
+  commission_mad: number;
+  dispatched_at: string | null;
+}
+
+export interface ConfirmationPayout {
+  orders_count: number;
+  commission_per_order: number;
+  base_amount_mad: number;
+  manual_adjustment_mad: number;
+  total_due_mad: number;
+  last_reset_at: string | null;
+  status: "paid" | "unpaid";
+  details?: ConfirmationPayoutDetailItem[] | null;
+}
+
 export interface AdminOrdersResponse {
   total: number;
   limit: number;
@@ -305,5 +325,30 @@ export async function dispatchOrders(adminKey: string, orderIds: string[], deliv
     method: "POST",
     headers: { "X-Admin-Key": adminKey },
     body: JSON.stringify({ order_ids: orderIds, delivery_company: deliveryCompany, status: "shipped" }),
+  });
+}
+
+export async function getConfirmationPayout(adminKey: string, details = false): Promise<ConfirmationPayout> {
+  return api<ConfirmationPayout>(`/v1/admin/confirmation-payouts${details ? "?details=true" : ""}`, {
+    headers: { "X-Admin-Key": adminKey },
+  });
+}
+
+export async function updateConfirmationPayout(
+  adminKey: string,
+  payload: { commission_per_order?: number; manual_adjustment_mad?: number }
+): Promise<ConfirmationPayout> {
+  return api<ConfirmationPayout>(`/v1/admin/confirmation-payouts`, {
+    method: "PATCH",
+    headers: { "X-Admin-Key": adminKey },
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function resetConfirmationPayout(adminKey: string, pin: string): Promise<ConfirmationPayout> {
+  return api<ConfirmationPayout>(`/v1/admin/confirmation-payouts/reset`, {
+    method: "POST",
+    headers: { "X-Admin-Key": adminKey },
+    body: JSON.stringify({ pin }),
   });
 }

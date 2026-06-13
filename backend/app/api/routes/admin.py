@@ -20,6 +20,9 @@ from app.schemas.admin import (
     AdminOrderListItem,
     AdminOrdersResponse,
     AdminOrderStatusUpdate,
+    ConfirmationPayoutResponse,
+    ConfirmationPayoutReset,
+    ConfirmationPayoutUpdate,
 )
 from app.services.admin import (
     dispatch_orders,
@@ -30,6 +33,7 @@ from app.services.admin import (
     update_admin_order_details,
     update_admin_order_status,
 )
+from app.services.payouts import PayoutPinError, get_payout, reset_payout, update_payout
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -168,3 +172,36 @@ async def admin_dispatch_orders(
         delivery_company=payload.delivery_company,
         new_status=payload.status,
     )
+
+
+@router.get("/confirmation-payouts", response_model=ConfirmationPayoutResponse, dependencies=[Depends(require_admin_key)])
+def admin_confirmation_payouts(
+    details: bool = Query(default=False),
+    db: Session = Depends(get_db),
+) -> ConfirmationPayoutResponse:
+    return get_payout(db, include_details=details)
+
+
+@router.patch("/confirmation-payouts", response_model=ConfirmationPayoutResponse, dependencies=[Depends(require_admin_key)])
+async def admin_update_confirmation_payouts(
+    request: Request,
+    db: Session = Depends(get_db),
+) -> ConfirmationPayoutResponse:
+    payload = await _parse_body(request, ConfirmationPayoutUpdate)
+    return update_payout(
+        db,
+        commission_per_order=payload.commission_per_order,
+        manual_adjustment_mad=payload.manual_adjustment_mad,
+    )
+
+
+@router.post("/confirmation-payouts/reset", response_model=ConfirmationPayoutResponse, dependencies=[Depends(require_admin_key)])
+async def admin_reset_confirmation_payouts(
+    request: Request,
+    db: Session = Depends(get_db),
+) -> ConfirmationPayoutResponse:
+    payload = await _parse_body(request, ConfirmationPayoutReset)
+    try:
+        return reset_payout(db, pin=payload.pin)
+    except PayoutPinError as exc:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(exc))

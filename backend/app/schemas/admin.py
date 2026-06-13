@@ -226,3 +226,32 @@ class AdminRateByOffer(BaseModel):
 class AdminCallCenterStats(BaseModel):
     by_period: list[AdminRatePeriod]
     by_offer: list[AdminRateByOffer]
+
+
+class ConfirmationPayoutDetailItem(BaseModel):
+    order_id: UUID
+    public_order_number: str
+    customer_name: str
+    total_mad: int
+    commission_mad: int
+    dispatched_at: Optional[datetime] = None
+
+
+class ConfirmationPayoutResponse(BaseModel):
+    orders_count: int
+    commission_per_order: int
+    base_amount_mad: int
+    manual_adjustment_mad: int
+    total_due_mad: int
+    last_reset_at: Optional[datetime] = None
+    status: str
+    details: Optional[list[ConfirmationPayoutDetailItem]] = None
+
+
+class ConfirmationPayoutUpdate(BaseModel):
+    commission_per_order: Optional[int] = Field(default=None, ge=0, le=100000)
+    manual_adjustment_mad: Optional[int] = Field(default=None, ge=-100000000, le=100000000)
+
+
+class ConfirmationPayoutReset(BaseModel):
+    pin: str = Field(min_length=1, max_length=64)
