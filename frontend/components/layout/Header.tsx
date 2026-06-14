@@ -7,7 +7,7 @@ import { Logo } from "@/components/brand/Logo";
 
 const NAV_LINKS = [
   { href: "/", label: "الرئيسية" },
-  { href: "/products/american-sugar-balance-complex", label: "المنتج" },
+  { href: "/products/balance", label: "المنتج" },
   { href: "/collections", label: "العروض" },
   { href: "/about", label: "من نحن" },
   { href: "/contact", label: "تواصل معنا" },
@@ -39,7 +39,7 @@ export function Header() {
           {/* CTA + mobile toggle on left */}
           <div className="flex items-center gap-3">
             <Link
-              href="/products/american-sugar-balance-complex#cod-order"
+              href="/products/balance#cod-order"
               className="hidden sm:inline-flex rounded-full bg-[#DC2626] px-5 py-2.5 text-sm font-bold text-white transition-colors hover:bg-red-700"
             >
               اطلب الآن

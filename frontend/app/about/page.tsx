@@ -54,7 +54,7 @@ export default function AboutPage() {
           </section>
 
           <div className="text-center pt-4">
-            <Link href="/products/american-sugar-balance-complex" className="btn-red inline-flex">
+            <Link href="/products/balance" className="btn-red inline-flex">
               اكتشف منتجنا الرئيسي
             </Link>
           </div>

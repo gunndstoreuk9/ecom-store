@@ -1,5 +1,5 @@
 "use client";
 
-import ProductPage from "./products/american-sugar-balance-complex/page";
+import ProductPage from "./products/balance/page";
 
 export default ProductPage;

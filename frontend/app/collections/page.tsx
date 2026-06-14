@@ -31,7 +31,7 @@ export default function CollectionsPage() {
           />
 
           <Link
-            href="/products/american-sugar-balance-complex"
+            href="/products/balance"
             className="card-base p-6 md:p-8 hover:shadow-lg transition-shadow group"
           >
             <div className="inline-block bg-[#DC2626] text-white text-xs font-bold px-3 py-1 rounded-full mb-3">

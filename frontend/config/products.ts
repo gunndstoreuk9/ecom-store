@@ -2,7 +2,7 @@ import { HERO_OFFERS } from "./offers";
 
 export const HERO_PRODUCT = {
   sku: "american-sugar-balance-complex",
-  slug: "american-sugar-balance-complex",
+  slug: "balance",
   nameAr: "المركّب الأمريكي لضبط السكر — الأصلي",
   nameEn: "American Sugar Balance Complex",
   descriptionAr:

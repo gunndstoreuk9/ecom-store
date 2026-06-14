@@ -18,7 +18,7 @@ export function Footer() {
           <div>
             <h4 className="font-semibold mb-3 text-sm uppercase tracking-wide text-gray-300">المتجر</h4>
             <ul className="space-y-2 text-sm text-gray-400">
-              <li><Link href="/products/american-sugar-balance-complex" className="hover:text-white transition-colors">المنتج الرئيسي</Link></li>
+              <li><Link href="/products/balance" className="hover:text-white transition-colors">المنتج الرئيسي</Link></li>
               <li><Link href="/collections" className="hover:text-white transition-colors">العروض</Link></li>
               <li><Link href="/collections" className="hover:text-white transition-colors">كل المنتجات</Link></li>
             </ul>
