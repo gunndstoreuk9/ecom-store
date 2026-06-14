@@ -374,7 +374,7 @@ export default function MarketingPage() {
                   </div>
                 </div>
 
-                <SpendEditor dark={dark} lang={lang} adminKey={currentKey} card={card} subtle={subtle} inputCls={inputCls} onSaved={() => void loadAll()} />
+                <SpendEditor lang={lang} adminKey={currentKey} card={card} subtle={subtle} inputCls={inputCls} onSaved={() => void loadAll()} />
               </>
             ) : (
               <p className={subtle}>{t("Loading...", "كيتحمل...")}</p>
@@ -857,7 +857,6 @@ function PixelEditor({
 }
 
 function SpendEditor({
-  dark,
   lang,
   adminKey,
   card,
@@ -865,7 +864,6 @@ function SpendEditor({
   inputCls,
   onSaved,
 }: {
-  dark: boolean;
   lang: Lang;
   adminKey: string;
   card: string;
