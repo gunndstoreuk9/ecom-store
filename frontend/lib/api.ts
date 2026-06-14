@@ -328,6 +328,162 @@ export async function dispatchOrders(adminKey: string, orderIds: string[], deliv
   });
 }
 
+export type TrackingPlatform = "meta" | "tiktok" | "google_ads" | "youtube" | "ga4";
+export type TrackingHealth = "excellent" | "warning" | "critical";
+
+export interface TrackingPixel {
+  id: string;
+  platform: TrackingPlatform;
+  name: string;
+  pixel_id: string;
+  has_token: boolean;
+  token_masked: string | null;
+  test_event_code: string | null;
+  capi_enabled: boolean;
+  status: "active" | "disabled";
+  scope_type: "store" | "product" | "landing" | "campaign";
+  scope_value: string | null;
+  events_enabled: string[] | null;
+  extra: Record<string, unknown> | null;
+  health: TrackingHealth;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TrackingPlatformStat {
+  platform: TrackingPlatform;
+  pixels: number;
+  active: number;
+  total_events: number;
+  purchases: number;
+  leads: number;
+  browser_events: number;
+  server_events: number;
+  errors: number;
+  spend_mad: number;
+  revenue_mad: number;
+  roas: number | null;
+  cost_per_lead: number | null;
+  cost_per_purchase: number | null;
+  health: TrackingHealth;
+}
+
+export interface TrackingAnalytics {
+  range_days: number;
+  total_events: number;
+  total_purchases: number;
+  total_leads: number;
+  conversion_rate: number;
+  browser_events: number;
+  server_events: number;
+  deduplication_rate: number;
+  event_match_quality: number;
+  health_score: number;
+  spend_mad: number;
+  revenue_mad: number;
+  roas: number | null;
+  cost_per_lead: number | null;
+  cost_per_purchase: number | null;
+  by_platform: TrackingPlatformStat[];
+}
+
+export interface TrackingLog {
+  id: string;
+  pixel_id: string | null;
+  platform: TrackingPlatform;
+  event_name: string;
+  source: "browser" | "server" | "test";
+  status: "ok" | "error";
+  message: string | null;
+  created_at: string;
+}
+
+export interface TrackingMeta {
+  platforms: string[];
+  events: string[];
+  scope_types: string[];
+}
+
+export interface TrackingPixelPayload {
+  platform?: TrackingPlatform;
+  name?: string;
+  pixel_id?: string;
+  access_token?: string;
+  test_event_code?: string | null;
+  capi_enabled?: boolean;
+  status?: "active" | "disabled";
+  scope_type?: "store" | "product" | "landing" | "campaign";
+  scope_value?: string | null;
+  events_enabled?: string[];
+  extra?: Record<string, unknown> | null;
+  pin?: string;
+}
+
+export async function getTrackingMeta(adminKey: string): Promise<TrackingMeta> {
+  return api<TrackingMeta>(`/v1/admin/tracking/meta`, { headers: { "X-Admin-Key": adminKey } });
+}
+
+export async function getTrackingPixels(adminKey: string): Promise<TrackingPixel[]> {
+  return api<TrackingPixel[]>(`/v1/admin/tracking/pixels`, { headers: { "X-Admin-Key": adminKey } });
+}
+
+export async function createTrackingPixel(adminKey: string, payload: TrackingPixelPayload): Promise<TrackingPixel> {
+  return api<TrackingPixel>(`/v1/admin/tracking/pixels`, {
+    method: "POST",
+    headers: { "X-Admin-Key": adminKey },
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updateTrackingPixel(adminKey: string, id: string, payload: TrackingPixelPayload): Promise<TrackingPixel> {
+  return api<TrackingPixel>(`/v1/admin/tracking/pixels/${id}`, {
+    method: "PATCH",
+    headers: { "X-Admin-Key": adminKey },
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deleteTrackingPixel(adminKey: string, id: string, pin: string): Promise<{ ok: boolean }> {
+  return api<{ ok: boolean }>(`/v1/admin/tracking/pixels/${id}/delete`, {
+    method: "POST",
+    headers: { "X-Admin-Key": adminKey },
+    body: JSON.stringify({ pin }),
+  });
+}
+
+export async function testTrackingPixel(adminKey: string, id: string): Promise<{ ok: boolean; platform: string; message: string }> {
+  return api<{ ok: boolean; platform: string; message: string }>(`/v1/admin/tracking/pixels/${id}/test`, {
+    method: "POST",
+    headers: { "X-Admin-Key": adminKey },
+    body: JSON.stringify({}),
+  });
+}
+
+export async function getTrackingAnalytics(adminKey: string, days = 7): Promise<TrackingAnalytics> {
+  return api<TrackingAnalytics>(`/v1/admin/tracking/analytics?days=${days}`, { headers: { "X-Admin-Key": adminKey } });
+}
+
+export async function getTrackingLogs(
+  adminKey: string,
+  params: { platform?: string; status?: string; limit?: number } = {}
+): Promise<{ total: number; logs: TrackingLog[] }> {
+  const search = new URLSearchParams();
+  Object.entries(params).forEach(([k, v]) => {
+    if (v !== undefined && v !== "") search.set(k, String(v));
+  });
+  return api<{ total: number; logs: TrackingLog[] }>(`/v1/admin/tracking/logs?${search.toString()}`, {
+    headers: { "X-Admin-Key": adminKey },
+  });
+}
+
+export async function upsertTrackingSpend(adminKey: string, platform: string, day: string, amountMad: number): Promise<{ ok: boolean }> {
+  return api<{ ok: boolean }>(`/v1/admin/tracking/spend`, {
+    method: "POST",
+    headers: { "X-Admin-Key": adminKey },
+    body: JSON.stringify({ platform, day, amount_mad: amountMad }),
+  });
+}
+
 export async function getConfirmationPayout(adminKey: string, details = false): Promise<ConfirmationPayout> {
   return api<ConfirmationPayout>(`/v1/admin/confirmation-payouts${details ? "?details=true" : ""}`, {
     headers: { "X-Admin-Key": adminKey },
