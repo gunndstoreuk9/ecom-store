@@ -32,6 +32,8 @@ const COD_BENEFITS = [
   "🚚 توصيل لجميع مدن المغرب",
 ];
 
+const DUPLICATE_ORDER_MESSAGE = "لقد توصلنا بطلبك بنجاح. المرجو انتظار مكالمة التأكيد.";
+
 const UTM_KEYS = [
   "utm_source",
   "utm_medium",
@@ -224,7 +226,7 @@ function DirectCodOrderForm({ embedded = false }: { embedded?: boolean } = {}) {
       router.push(`/thank-you?order_id=${order.order_id}`);
     } catch (error) {
       console.error("Order creation failed", error);
-      setSubmitError(error instanceof ApiError && error.status === 409 ? error.message : "تعذر إرسال الطلب. تأكد من الاتصال أو جرب مرة أخرى بعد لحظات.");
+      setSubmitError(error instanceof ApiError && error.status === 409 ? DUPLICATE_ORDER_MESSAGE : "تعذر إرسال الطلب. تأكد من الاتصال أو جرب مرة أخرى بعد لحظات.");
     } finally {
       setSubmitting(false);
     }
@@ -384,7 +386,7 @@ function DirectCodOrderForm({ embedded = false }: { embedded?: boolean } = {}) {
                 {submitting ? "جاري إرسال الطلب..." : "أكد طلبي الآن — الدفع عند الاستلام ←"}
               </button>
               {submitError && (
-                <p className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-center text-sm font-bold text-[#B91C1C]">
+                <p className="rounded-3xl border-2 border-red-200 bg-red-50 px-5 py-4 text-center text-xl font-extrabold leading-8 text-[#B91C1C] shadow-sm md:text-2xl">
                   {submitError}
                 </p>
               )}

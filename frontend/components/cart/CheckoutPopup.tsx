@@ -23,6 +23,7 @@ const schema = z.object({
 });
 
 type FormData = z.infer<typeof schema>;
+const DUPLICATE_ORDER_MESSAGE = "لقد توصلنا بطلبك بنجاح. المرجو انتظار مكالمة التأكيد.";
 
 export function CheckoutPopup() {
   const { closeCheckout, selectedOffer, setLastOrderId, utm } = useCartStore();
@@ -75,7 +76,7 @@ export function CheckoutPopup() {
       router.push(`/thank-you?order_id=${order.order_id}`);
     } catch (error) {
       console.error("Order creation failed", error);
-      setError(error instanceof ApiError && error.status === 409 ? error.message : "تعذر إرسال الطلب. تأكد من الاتصال أو جرب مرة أخرى بعد لحظات.");
+      setError(error instanceof ApiError && error.status === 409 ? DUPLICATE_ORDER_MESSAGE : "تعذر إرسال الطلب. تأكد من الاتصال أو جرب مرة أخرى بعد لحظات.");
     } finally {
       setSubmitting(false);
     }
@@ -161,7 +162,7 @@ export function CheckoutPopup() {
             )}
           </div>
 
-          {error && <p className="text-[#DC2626] text-sm bg-red-50 rounded-xl px-4 py-3">{error}</p>}
+          {error && <p className="rounded-2xl border-2 border-red-200 bg-red-50 px-4 py-4 text-center text-lg font-extrabold leading-7 text-[#B91C1C]">{error}</p>}
 
           <button
             type="submit"

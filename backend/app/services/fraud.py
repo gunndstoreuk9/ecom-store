@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from app.models.fraud import FraudEvent, FraudSettings
 from app.models.order import Order
 
-DUPLICATE_MESSAGE = "Your order has already been received. Please wait for confirmation."
+DUPLICATE_MESSAGE = "لقد توصلنا بطلبك بنجاح. المرجو انتظار مكالمة التأكيد."
 CANCELLED_STATUSES = {"cancelled", "refused", "no_answer"}
 
 
