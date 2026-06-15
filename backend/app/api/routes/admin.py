@@ -24,6 +24,7 @@ from app.schemas.admin import (
     ConfirmationPayoutReset,
     ConfirmationPayoutUpdate,
 )
+from app.schemas.store_analytics import StoreAnalyticsResponse
 from app.services.admin import (
     dispatch_orders,
     get_admin_analytics,
@@ -34,6 +35,7 @@ from app.services.admin import (
     update_admin_order_status,
 )
 from app.services.payouts import PayoutPinError, get_payout, reset_payout, update_payout
+from app.services.store_analytics import get_store_analytics
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -71,6 +73,14 @@ def admin_analytics(
     db: Session = Depends(get_db),
 ) -> AdminAnalyticsResponse:
     return get_admin_analytics(db, days=days)
+
+
+@router.get("/store-analytics", response_model=StoreAnalyticsResponse, dependencies=[Depends(require_admin_key)])
+def admin_store_analytics(
+    days: int = Query(default=30, ge=1, le=365),
+    db: Session = Depends(get_db),
+) -> StoreAnalyticsResponse:
+    return get_store_analytics(db, days=days)
 
 
 @router.get("/orders", response_model=AdminOrdersResponse, dependencies=[Depends(require_call_center_key)])

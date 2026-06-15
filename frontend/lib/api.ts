@@ -219,6 +219,117 @@ export interface AdminRateMetric {
   value: number;
 }
 
+export interface StoreComparison {
+  yesterday_pct: number;
+  last_7_days_pct: number;
+  last_30_days_pct: number;
+}
+
+export interface StoreKpi {
+  key: string;
+  label: string;
+  value: number;
+  unit: string;
+  comparison: StoreComparison;
+}
+
+export interface StoreTrafficSource {
+  source: string;
+  visitors: number;
+  orders: number;
+  revenue_mad: number;
+  conversion_rate: number;
+}
+
+export interface StoreFunnelStep {
+  key: string;
+  label: string;
+  count: number;
+  step_rate: number;
+  dropoff_rate: number;
+}
+
+export interface StoreTrendPoint {
+  date: string;
+  visitors: number;
+  orders: number;
+  revenue_mad: number;
+}
+
+export interface StoreProductMetric {
+  product_name: string;
+  views: number;
+  orders: number;
+  revenue_mad: number;
+  conversion_rate: number;
+  delivery_rate: number;
+  cancelled_orders: number;
+  returned_orders: number;
+}
+
+export interface StoreLandingPageMetric {
+  page: string;
+  visitors: number;
+  orders: number;
+  confirmed_orders: number;
+  delivered_orders: number;
+  revenue_mad: number;
+  conversion_rate: number;
+  bounce_rate: number;
+}
+
+export interface StoreGeoMetric {
+  city: string;
+  orders: number;
+  revenue_mad: number;
+  delivery_rate: number;
+}
+
+export interface StoreCustomerAnalytics {
+  total_customers: number;
+  new_customers: number;
+  returning_customers: number;
+  repeat_purchase_rate: number;
+  customer_lifetime_value_mad: number;
+  average_orders_per_customer: number;
+}
+
+export interface StoreCodAnalytics {
+  cod_orders: number;
+  confirmation_rate: number;
+  shipping_rate: number;
+  delivery_rate: number;
+  cancellation_rate: number;
+  return_rate: number;
+  fake_order_rate: number;
+  confirmed_over_total: number;
+  delivered_over_confirmed: number;
+  delivered_over_total: number;
+}
+
+export interface StoreRealtimeAnalytics {
+  active_visitors: number;
+  orders_today: number;
+  orders_this_hour: number;
+  revenue_today_mad: number;
+  revenue_this_hour_mad: number;
+}
+
+export interface StoreAnalytics {
+  days: number;
+  executive_kpis: StoreKpi[];
+  traffic_sources: StoreTrafficSource[];
+  funnel: StoreFunnelStep[];
+  trends: StoreTrendPoint[];
+  products: StoreProductMetric[];
+  landing_pages: StoreLandingPageMetric[];
+  geo: StoreGeoMetric[];
+  customer: StoreCustomerAnalytics;
+  cod: StoreCodAnalytics;
+  realtime: StoreRealtimeAnalytics;
+  notes?: string[] | null;
+}
+
 export interface AdminFunnelStep {
   key: string;
   label: string;
@@ -265,6 +376,12 @@ export async function getAdminRole(adminKey: string): Promise<{ role: "admin" | 
 
 export async function getAdminAnalytics(adminKey: string, days = 30): Promise<AdminAnalytics> {
   return api<AdminAnalytics>(`/v1/admin/analytics?days=${days}`, {
+    headers: { "X-Admin-Key": adminKey },
+  });
+}
+
+export async function getStoreAnalytics(adminKey: string, days = 30): Promise<StoreAnalytics> {
+  return api<StoreAnalytics>(`/v1/admin/store-analytics?days=${days}`, {
     headers: { "X-Admin-Key": adminKey },
   });
 }

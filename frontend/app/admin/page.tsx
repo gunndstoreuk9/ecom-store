@@ -277,6 +277,13 @@ export default function AdminDashboardPage() {
           <div className="flex flex-wrap items-center gap-2">
             <LanguageToggle lang={lang} setLang={setLang} dark />
             <Link
+              href="/admin/store-analytics"
+              className="flex items-center gap-2 rounded-full bg-white/15 px-4 py-2 text-sm font-black text-white transition hover:bg-white/25"
+            >
+              <TrendingUp className="h-4 w-4" />
+              {t("Store Analytics", "تحليلات المتجر")}
+            </Link>
+            <Link
               href="/admin/marketing"
               className="flex items-center gap-2 rounded-full bg-white/15 px-4 py-2 text-sm font-black text-white transition hover:bg-white/25"
             >
