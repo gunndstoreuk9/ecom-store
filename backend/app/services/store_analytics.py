@@ -191,7 +191,7 @@ def _source_from_utm(utm: Optional[dict]) -> str:
 def _traffic_sources(db: Session, start: datetime, end: datetime) -> list[StoreTrafficSource]:
     clicks = (
         db.query(ProductLink.platform, func.count(distinct(ProductLinkClick.visitor_hash)))
-        .join(ProductLink, ProductLink.id == ProductLinkClick.link_id)
+        .join(ProductLinkClick, ProductLinkClick.link_id == ProductLink.id)
         .filter(ProductLinkClick.created_at >= start, ProductLinkClick.created_at < end)
         .group_by(ProductLink.platform)
         .all()
