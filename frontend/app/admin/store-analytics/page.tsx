@@ -178,7 +178,7 @@ export default function StoreAnalyticsPage() {
               <RealtimeCard data={data} card={card} subtle={subtle} />
               <CodCard data={data} card={card} subtle={subtle} />
               <CustomerCard data={data} card={card} subtle={subtle} />
-              <FunnelCard data={data} card={card} subtle={subtle} />
+              <FunnelCard data={data} card={card} />
             </section>
 
             <section className={`rounded-3xl border p-5 ${card}`}>
@@ -279,7 +279,7 @@ function CustomerCard({ data, card, subtle }: { data: StoreAnalytics; card: stri
   ]} />;
 }
 
-function FunnelCard({ data, card, subtle }: { data: StoreAnalytics; card: string; subtle: string }) {
+function FunnelCard({ data, card }: { data: StoreAnalytics; card: string }) {
   return (
     <div className={`rounded-3xl border p-5 ${card}`}>
       <h2 className="mb-4 text-base font-black">Conversion Funnel</h2>
