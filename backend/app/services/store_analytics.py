@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections import Counter, defaultdict
 from datetime import datetime, time, timedelta, timezone
+import logging
 from typing import Optional
 
 from sqlalchemy import distinct, func
@@ -23,6 +24,8 @@ from app.schemas.store_analytics import (
     StoreTrafficSource,
     StoreTrendPoint,
 )
+
+logger = logging.getLogger(__name__)
 
 DELIVERED = {"delivered"}
 RETURNED = {"returned", "refused"}
@@ -59,22 +62,63 @@ def get_store_analytics(db: Session, *, days: int) -> StoreAnalyticsResponse:
     last_7 = _metrics(db, last_7_start, now)
     last_30 = _metrics(db, last_30_start, now)
 
+    notes = [
+        "Traffic metrics are based on Product Links Manager clicks/visitors plus stored order UTM sources.",
+        "Bounce rate and session duration require a full onsite event collector; current bounce rate is estimated from single-click visitors.",
+    ]
+
+    traffic_sources = _safe("traffic_sources", lambda: _traffic_sources(db, start, now), [], notes)
+    funnel = _safe("funnel", lambda: _funnel(db, start, now), [], notes)
+    trends = _safe("trends", lambda: _trends(db, start, now), [], notes)
+    products = _safe("products", lambda: _products(db, start, now), [], notes)
+    landing_pages = _safe("landing_pages", lambda: _landing_pages(db, start, now), [], notes)
+    geo = _safe("geo", lambda: _geo(db, start, now), [], notes)
+    customer = _safe("customer", lambda: _customers(db, start, now), _empty_customer(), notes)
+    realtime = _safe("realtime", lambda: _realtime(db, now), _empty_realtime(), notes)
+
     return StoreAnalyticsResponse(
         days=safe_days,
         executive_kpis=_executive_kpis(current, yesterday, last_7, last_30),
-        traffic_sources=_traffic_sources(db, start, now),
-        funnel=_funnel(db, start, now),
-        trends=_trends(db, start, now),
-        products=_products(db, start, now),
-        landing_pages=_landing_pages(db, start, now),
-        geo=_geo(db, start, now),
-        customer=_customers(db, start, now),
+        traffic_sources=traffic_sources,
+        funnel=funnel,
+        trends=trends,
+        products=products,
+        landing_pages=landing_pages,
+        geo=geo,
+        customer=customer,
         cod=_cod(current),
-        realtime=_realtime(db, now),
-        notes=[
-            "Traffic metrics are based on Product Links Manager clicks/visitors plus stored order UTM sources.",
-            "Bounce rate and session duration require a full onsite event collector; current bounce rate is estimated from single-click visitors.",
-        ],
+        realtime=realtime,
+        notes=notes,
+    )
+
+
+def _safe(label: str, fn, fallback, notes: list[str]):
+    try:
+        return fn()
+    except Exception:
+        logger.exception("Store Analytics section failed: %s", label)
+        notes.append(f"{label} temporarily unavailable because one stored record has unexpected data.")
+        return fallback
+
+
+def _empty_customer() -> StoreCustomerAnalytics:
+    return StoreCustomerAnalytics(
+        total_customers=0,
+        new_customers=0,
+        returning_customers=0,
+        repeat_purchase_rate=0,
+        customer_lifetime_value_mad=0,
+        average_orders_per_customer=0,
+    )
+
+
+def _empty_realtime() -> StoreRealtimeAnalytics:
+    return StoreRealtimeAnalytics(
+        active_visitors=0,
+        orders_today=0,
+        orders_this_hour=0,
+        revenue_today_mad=0,
+        revenue_this_hour_mad=0,
     )
 
 
@@ -172,7 +216,9 @@ def _executive_kpis(current: dict, yesterday: dict, last_7: dict, last_30: dict)
 
 
 def _source_from_utm(utm: Optional[dict]) -> str:
-    raw = ((utm or {}).get("utm_source") or (utm or {}).get("source") or "direct").lower()
+    if not isinstance(utm, dict):
+        return "Direct Traffic"
+    raw = str(utm.get("utm_source") or utm.get("source") or "direct").lower()
     if "tt" in raw or "tiktok" in raw:
         return "TikTok Ads"
     if "fb" in raw or "facebook" in raw:
