@@ -64,6 +64,9 @@ export interface CreateOrderPayload {
   sku: string;
   utm?: Record<string, string>;
   event_id?: string;
+  whatsapp_e164?: string;
+  browser_fingerprint?: string;
+  device_id?: string;
 }
 
 export interface Order {
@@ -95,6 +98,13 @@ export interface AdminOrder {
   phone_e164: string;
   city?: string | null;
   address?: string | null;
+  browser_fingerprint?: string | null;
+  device_id?: string | null;
+  risk_score: number;
+  risk_level: "low" | "medium" | "high";
+  fraud_flags?: Record<string, unknown> | null;
+  block_reason?: string | null;
+  fraud_checked_at?: string | null;
   call_status?: string | null;
   call_note?: string | null;
   call_attempts: number;
@@ -356,6 +366,39 @@ export interface AdminAnalytics {
   order_funnel: AdminFunnelStep[];
 }
 
+export interface FraudOrderScore {
+  id: string;
+  public_order_number: string;
+  customer_name: string;
+  phone_e164: string;
+  risk_score: number;
+  risk_level: "low" | "medium" | "high";
+  fraud_flags?: Record<string, unknown> | null;
+  created_at: string;
+}
+
+export interface FraudStats {
+  days: number;
+  blocked_duplicate_orders: number;
+  suspicious_orders: number;
+  high_risk_orders: number;
+  latest: FraudOrderScore[];
+}
+
+export interface FraudSettings {
+  enabled: boolean;
+  lock_period_minutes: number;
+  medium_risk_threshold: number;
+  high_risk_threshold: number;
+  ip_window_minutes: number;
+  ip_order_limit: number;
+  device_phone_limit: number;
+  rapid_submit_seconds: number;
+  updated_at: string;
+}
+
+export type FraudSettingsPayload = Partial<Omit<FraudSettings, "updated_at">>;
+
 export async function createOrder(payload: CreateOrderPayload): Promise<Order> {
   return api<Order>("/v1/orders", {
     method: "POST",
@@ -377,6 +420,26 @@ export async function getAdminRole(adminKey: string): Promise<{ role: "admin" | 
 export async function getAdminAnalytics(adminKey: string, days = 30): Promise<AdminAnalytics> {
   return api<AdminAnalytics>(`/v1/admin/analytics?days=${days}`, {
     headers: { "X-Admin-Key": adminKey },
+  });
+}
+
+export async function getFraudStats(adminKey: string, days = 30): Promise<FraudStats> {
+  return api<FraudStats>(`/v1/admin/fraud/stats?days=${days}`, {
+    headers: { "X-Admin-Key": adminKey },
+  });
+}
+
+export async function getFraudSettings(adminKey: string): Promise<FraudSettings> {
+  return api<FraudSettings>(`/v1/admin/fraud/settings`, {
+    headers: { "X-Admin-Key": adminKey },
+  });
+}
+
+export async function updateFraudSettings(adminKey: string, payload: FraudSettingsPayload): Promise<FraudSettings> {
+  return api<FraudSettings>(`/v1/admin/fraud/settings`, {
+    method: "PATCH",
+    headers: { "X-Admin-Key": adminKey },
+    body: JSON.stringify(payload),
   });
 }
 

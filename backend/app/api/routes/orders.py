@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.core.database import SessionLocal, get_db
 from app.schemas.order import CreateOrderRequest, OrderDetailResponse, OrderResponse
+from app.services.fraud import DuplicateOrderError
 from app.services.orders import create_order, get_order, to_order_detail_response, to_order_response
 from app.services.sheets import sync_order_to_sheet
 from app.services.tracking import create_noop_conversion_events
@@ -25,9 +26,12 @@ async def create_order_endpoint(
     db: Session = Depends(get_db),
 ) -> OrderResponse:
     payload = await _parse_create_order_request(request)
-    client_ip = request.client.host if request.client else None
+    client_ip = _client_ip(request)
     user_agent = request.headers.get("user-agent")
-    order = create_order(db, payload, client_ip=client_ip, user_agent=user_agent)
+    try:
+        order = create_order(db, payload, client_ip=client_ip, user_agent=user_agent)
+    except DuplicateOrderError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=exc.message)
     create_noop_conversion_events(db, order)
     background_tasks.add_task(sync_order_to_sheet, str(order.id), SessionLocal)
     return to_order_response(order)
@@ -54,3 +58,13 @@ async def _parse_create_order_request(request: Request) -> CreateOrderRequest:
     except ValidationError as exc:
         errors = [{"loc": error.get("loc", ()), "msg": error.get("msg", "Invalid value")} for error in exc.errors()]
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=errors)
+
+
+def _client_ip(request: Request) -> str | None:
+    forwarded_for = request.headers.get("x-forwarded-for")
+    if forwarded_for:
+        return forwarded_for.split(",")[0].strip() or None
+    real_ip = request.headers.get("x-real-ip")
+    if real_ip:
+        return real_ip.strip() or None
+    return request.client.host if request.client else None

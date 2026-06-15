@@ -61,6 +61,13 @@ class AdminOrderListItem(BaseModel):
     phone_e164: str
     city: Optional[str] = None
     address: Optional[str] = None
+    browser_fingerprint: Optional[str] = None
+    device_id: Optional[str] = None
+    risk_score: int = 0
+    risk_level: str = "low"
+    fraud_flags: Optional[dict] = None
+    block_reason: Optional[str] = None
+    fraud_checked_at: Optional[datetime] = None
     call_status: Optional[str] = None
     call_note: Optional[str] = None
     call_attempts: int = 0
@@ -255,3 +262,45 @@ class ConfirmationPayoutUpdate(BaseModel):
 
 class ConfirmationPayoutReset(BaseModel):
     pin: str = Field(min_length=1, max_length=64)
+
+
+class FraudSettingsResponse(BaseModel):
+    enabled: bool
+    lock_period_minutes: int
+    medium_risk_threshold: int
+    high_risk_threshold: int
+    ip_window_minutes: int
+    ip_order_limit: int
+    device_phone_limit: int
+    rapid_submit_seconds: int
+    updated_at: datetime
+
+
+class FraudSettingsUpdate(BaseModel):
+    enabled: Optional[bool] = None
+    lock_period_minutes: Optional[int] = Field(default=None, ge=5, le=1440)
+    medium_risk_threshold: Optional[int] = Field(default=None, ge=1, le=100)
+    high_risk_threshold: Optional[int] = Field(default=None, ge=1, le=100)
+    ip_window_minutes: Optional[int] = Field(default=None, ge=1, le=1440)
+    ip_order_limit: Optional[int] = Field(default=None, ge=1, le=100)
+    device_phone_limit: Optional[int] = Field(default=None, ge=1, le=50)
+    rapid_submit_seconds: Optional[int] = Field(default=None, ge=5, le=3600)
+
+
+class FraudOrderScore(BaseModel):
+    id: UUID
+    public_order_number: str
+    customer_name: str
+    phone_e164: str
+    risk_score: int
+    risk_level: str
+    fraud_flags: Optional[dict] = None
+    created_at: datetime
+
+
+class FraudStatsResponse(BaseModel):
+    days: int
+    blocked_duplicate_orders: int
+    suspicious_orders: int
+    high_risk_orders: int
+    latest: list[FraudOrderScore]

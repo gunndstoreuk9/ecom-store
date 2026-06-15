@@ -20,6 +20,17 @@ class CreateOrderRequest(BaseModel):
     sku: str
     utm: Optional[dict[str, str]] = None
     event_id: Optional[str] = None
+    whatsapp_e164: Optional[str] = Field(default=None, max_length=16)
+    browser_fingerprint: Optional[str] = Field(default=None, max_length=128)
+    device_id: Optional[str] = Field(default=None, max_length=128)
+
+    @field_validator("browser_fingerprint", "device_id")
+    @classmethod
+    def normalize_client_identifier(cls, value: Optional[str]) -> Optional[str]:
+        if value is None:
+            return value
+        cleaned = value.strip()
+        return cleaned or None
 
     @field_validator("phone_raw")
     @classmethod
@@ -35,6 +46,15 @@ class CreateOrderRequest(BaseModel):
             return value
         if not is_valid_morocco_mobile(value):
             raise ValueError("Invalid Morocco mobile number")
+        return normalize_morocco_phone(value)
+
+    @field_validator("whatsapp_e164")
+    @classmethod
+    def validate_whatsapp_e164(cls, value: Optional[str]) -> Optional[str]:
+        if value is None:
+            return value
+        if not is_valid_morocco_mobile(value):
+            raise ValueError("Invalid Morocco WhatsApp number")
         return normalize_morocco_phone(value)
 
 

@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.models.order import Order, OrderItem
 from app.schemas.order import CreateOrderRequest, OrderDetailResponse, OrderResponse
+from app.services.fraud import evaluate_order_risk
 from app.services.hashing import sha256_hex
 from app.services.money import validate_offer
 from app.services.phone import (
@@ -31,6 +32,15 @@ def create_order(
     offer = validate_offer(payload.offer_id, payload.qty, payload.price_mad, payload.sku)
     phone_e164 = normalize_morocco_phone(payload.phone_e164 or payload.phone_raw)
     phone_local = to_local_morocco_phone(phone_e164)
+    fraud = evaluate_order_risk(
+        db,
+        phone_e164=phone_e164,
+        whatsapp_e164=payload.whatsapp_e164,
+        client_ip=client_ip,
+        browser_fingerprint=payload.browser_fingerprint,
+        device_id=payload.device_id,
+        user_agent=user_agent,
+    )
 
     order = Order(
         public_order_number=_next_public_order_number(db),
@@ -42,6 +52,13 @@ def create_order(
         phone_hash_meta=sha256_hex(meta_phone_hash_input(phone_e164)),
         phone_hash_tiktok=sha256_hex(tiktok_phone_hash_input(phone_e164)),
         city=payload.city.strip() if payload.city else None,
+        browser_fingerprint=payload.browser_fingerprint,
+        device_id=payload.device_id,
+        risk_score=fraud.risk_score,
+        risk_level=fraud.risk_level,
+        fraud_flags={"rules": fraud.flags},
+        block_reason=fraud.block_reason,
+        fraud_checked_at=datetime.now(timezone.utc),
         hero_sku=payload.sku,
         hero_qty=offer["qty"],
         hero_price_mad=offer["price_mad"],

@@ -6,8 +6,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { X } from "lucide-react";
 import { useCartStore } from "./CartProvider";
-import { createOrder } from "@/lib/api";
+import { ApiError, createOrder } from "@/lib/api";
 import { isValidMoroccoMobile, toE164MoroccoPhone } from "@/lib/phone";
+import { getBrowserFingerprint, getDeviceId } from "@/lib/fingerprint";
 import { generateEventId } from "@/lib/event-id";
 import { trackLead } from "@/lib/tracking";
 import { formatMad } from "@/lib/currency";
@@ -63,6 +64,9 @@ export function CheckoutPopup() {
         sku: HERO_PRODUCT.sku,
         utm,
         event_id: eventId,
+        whatsapp_e164: toE164MoroccoPhone(data.phone),
+        browser_fingerprint: getBrowserFingerprint(),
+        device_id: getDeviceId(),
       });
 
       trackLead({ value: selectedOffer.priceMad, eventId });
@@ -71,7 +75,7 @@ export function CheckoutPopup() {
       router.push(`/thank-you?order_id=${order.order_id}`);
     } catch (error) {
       console.error("Order creation failed", error);
-      setError("تعذر إرسال الطلب. تأكد من الاتصال أو جرب مرة أخرى بعد لحظات.");
+      setError(error instanceof ApiError && error.status === 409 ? error.message : "تعذر إرسال الطلب. تأكد من الاتصال أو جرب مرة أخرى بعد لحظات.");
     } finally {
       setSubmitting(false);
     }

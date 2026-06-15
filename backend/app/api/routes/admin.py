@@ -23,6 +23,9 @@ from app.schemas.admin import (
     ConfirmationPayoutResponse,
     ConfirmationPayoutReset,
     ConfirmationPayoutUpdate,
+    FraudSettingsResponse,
+    FraudSettingsUpdate,
+    FraudStatsResponse,
 )
 from app.schemas.store_analytics import StoreAnalyticsResponse
 from app.services.admin import (
@@ -35,6 +38,7 @@ from app.services.admin import (
     update_admin_order_status,
 )
 from app.services.payouts import PayoutPinError, get_payout, reset_payout, update_payout
+from app.services.fraud import get_fraud_settings, get_fraud_stats, update_fraud_settings
 from app.services.store_analytics import get_store_analytics
 
 router = APIRouter(prefix="/admin", tags=["admin"])
@@ -81,6 +85,53 @@ def admin_store_analytics(
     db: Session = Depends(get_db),
 ) -> StoreAnalyticsResponse:
     return get_store_analytics(db, days=days)
+
+
+@router.get("/fraud/stats", response_model=FraudStatsResponse, dependencies=[Depends(require_admin_key)])
+def admin_fraud_stats(
+    days: int = Query(default=30, ge=1, le=365),
+    db: Session = Depends(get_db),
+) -> FraudStatsResponse:
+    stats = get_fraud_stats(db, days=days)
+    return FraudStatsResponse(
+        days=stats["days"],
+        blocked_duplicate_orders=stats["blocked_duplicate_orders"],
+        suspicious_orders=stats["suspicious_orders"],
+        high_risk_orders=stats["high_risk_orders"],
+        latest=[
+            {
+                "id": order.id,
+                "public_order_number": order.public_order_number,
+                "customer_name": order.customer_name,
+                "phone_e164": order.phone_e164,
+                "risk_score": order.risk_score or 0,
+                "risk_level": order.risk_level or "low",
+                "fraud_flags": order.fraud_flags,
+                "created_at": order.created_at,
+            }
+            for order in stats["latest"]
+        ],
+    )
+
+
+@router.get("/fraud/settings", response_model=FraudSettingsResponse, dependencies=[Depends(require_admin_key)])
+def admin_fraud_settings(db: Session = Depends(get_db)) -> FraudSettingsResponse:
+    return FraudSettingsResponse.model_validate(get_fraud_settings(db), from_attributes=True)
+
+
+@router.patch("/fraud/settings", response_model=FraudSettingsResponse, dependencies=[Depends(require_admin_key)])
+async def admin_update_fraud_settings(
+    request: Request,
+    db: Session = Depends(get_db),
+) -> FraudSettingsResponse:
+    payload = await _parse_body(request, FraudSettingsUpdate)
+    current = get_fraud_settings(db)
+    medium_threshold = payload.medium_risk_threshold if payload.medium_risk_threshold is not None else current.medium_risk_threshold
+    high_threshold = payload.high_risk_threshold if payload.high_risk_threshold is not None else current.high_risk_threshold
+    if medium_threshold >= high_threshold:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Medium threshold must be lower than high threshold")
+    settings = update_fraud_settings(db, **payload.model_dump(exclude_unset=True))
+    return FraudSettingsResponse.model_validate(settings, from_attributes=True)
 
 
 @router.get("/orders", response_model=AdminOrdersResponse, dependencies=[Depends(require_call_center_key)])

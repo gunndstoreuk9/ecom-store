@@ -13,6 +13,7 @@ import {
   Package,
   RefreshCw,
   Search,
+  ShieldAlert,
   TrendingUp,
   Users,
 } from "lucide-react";
@@ -21,8 +22,13 @@ import {
   AdminOrder,
   AdminOrdersResponse,
   ApiError,
+  FraudSettings,
+  FraudStats,
   getAdminAnalytics,
+  getFraudSettings,
+  getFraudStats,
   getAdminOrders,
+  updateFraudSettings,
   updateAdminOrderStatus,
 } from "@/lib/api";
 import { formatMad } from "@/lib/currency";
@@ -77,6 +83,9 @@ export default function AdminDashboardPage() {
   const [savedKey, setSavedKey] = useState("");
   const [analytics, setAnalytics] = useState<AdminAnalytics | null>(null);
   const [ordersData, setOrdersData] = useState<AdminOrdersResponse | null>(null);
+  const [fraudStats, setFraudStats] = useState<FraudStats | null>(null);
+  const [fraudSettings, setFraudSettings] = useState<FraudSettings | null>(null);
+  const [fraudSaving, setFraudSaving] = useState(false);
   const [statusFilter, setStatusFilter] = useState("");
   const [sheetFilter, setSheetFilter] = useState("");
   const [query, setQuery] = useState("");
@@ -157,12 +166,16 @@ export default function AdminDashboardPage() {
     setLoading(true);
     setError(null);
     try {
-      const [analyticsResult, ordersResult] = await Promise.all([
+      const [analyticsResult, ordersResult, fraudStatsResult, fraudSettingsResult] = await Promise.all([
         getAdminAnalytics(key, days),
         getAdminOrders(key, { limit: 200, status: statusFilter, sheet_sync_status: sheetFilter, q: query }),
+        getFraudStats(key, days),
+        getFraudSettings(key),
       ]);
       setAnalytics(analyticsResult);
       setOrdersData(ordersResult);
+      setFraudStats(fraudStatsResult);
+      setFraudSettings(fraudSettingsResult);
     } catch (err) {
       if (err instanceof ApiError && err.status === 403) {
         setError(t("This key is for the call center only. Open the Call Center page.", "هاد المفتاح خاص بالـ call center فقط. دخل لصفحة Call Center."));
@@ -193,7 +206,34 @@ export default function AdminDashboardPage() {
     setSavedKey("");
     setAnalytics(null);
     setOrdersData(null);
+    setFraudStats(null);
+    setFraudSettings(null);
     setAdminKey("");
+  }
+
+  async function saveFraudSettings(next: FraudSettings) {
+    if (!currentKey) return;
+    setFraudSaving(true);
+    setError(null);
+    try {
+      const updated = await updateFraudSettings(currentKey, {
+        enabled: next.enabled,
+        lock_period_minutes: next.lock_period_minutes,
+        medium_risk_threshold: next.medium_risk_threshold,
+        high_risk_threshold: next.high_risk_threshold,
+        ip_window_minutes: next.ip_window_minutes,
+        ip_order_limit: next.ip_order_limit,
+        device_phone_limit: next.device_phone_limit,
+        rapid_submit_seconds: next.rapid_submit_seconds,
+      });
+      setFraudSettings(updated);
+      const stats = await getFraudStats(currentKey, days);
+      setFraudStats(stats);
+    } catch (err) {
+      setError(errorMessage(err, lang));
+    } finally {
+      setFraudSaving(false);
+    }
   }
 
   function applyCustomDate(value: string) {
@@ -390,6 +430,15 @@ export default function AdminDashboardPage() {
               ))}
             </div>
 
+            <FraudProtectionPanel
+              lang={lang}
+              stats={fraudStats}
+              settings={fraudSettings}
+              saving={fraudSaving}
+              setSettings={setFraudSettings}
+              onSave={saveFraudSettings}
+            />
+
             <div className="grid gap-6 xl:grid-cols-[1.4fr_0.6fr]">
               <Card title={t("Revenue Trend", "تطور المداخيل")} subtitle={t("Performance over the selected window", "الأداء خلال الفترة المختارة")}>
                 <GranularityToggle value={granularity} setValue={setGranularity} lang={lang} />
@@ -511,6 +560,7 @@ export default function AdminDashboardPage() {
                     <th className="px-3 py-2 text-start">{t("City", "المدينة")}</th>
                     <th className="px-3 py-2 text-start">{t("Qty", "الكمية")}</th>
                     <th className="px-3 py-2 text-start">{t("Revenue", "المبلغ")}</th>
+                    <th className="px-3 py-2 text-start">{t("Fraud", "الاحتيال")}</th>
                     <th className="px-3 py-2 text-start">Sheet</th>
                     <th className="px-3 py-2 text-start">{t("Status", "الحالة")}</th>
                     <th className="px-3 py-2 text-start">{t("Date", "التاريخ")}</th>
@@ -726,6 +776,130 @@ function ModulesGrid({
   );
 }
 
+function FraudProtectionPanel({
+  lang,
+  stats,
+  settings,
+  saving,
+  setSettings,
+  onSave,
+}: {
+  lang: Lang;
+  stats: FraudStats | null;
+  settings: FraudSettings | null;
+  saving: boolean;
+  setSettings: (settings: FraudSettings) => void;
+  onSave: (settings: FraudSettings) => Promise<void>;
+}) {
+  const t = (en: string, ar: string) => (lang === "ar" ? ar : en);
+  type EditableFraudSetting = Exclude<keyof FraudSettings, "updated_at">;
+  const updateSetting = <K extends EditableFraudSetting>(key: K, value: FraudSettings[K]) => {
+    if (!settings) return;
+    setSettings({ ...settings, [key]: value });
+  };
+
+  return (
+    <Card title={t("Anti-Fraud & Duplicate Order Protection", "الحماية من الطلبات الوهمية والمكررة")} subtitle={t("Server-side checks before every COD order", "فحص من السيرفر قبل كل طلب دفع عند الاستلام")}>
+      <div className="grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
+        <div className="space-y-4">
+          <div className="grid gap-3 sm:grid-cols-3">
+            <FraudMetric label={t("Blocked duplicates", "طلبات مكررة محظورة")} value={stats?.blocked_duplicate_orders ?? 0} tone="red" />
+            <FraudMetric label={t("Suspicious orders", "طلبات مشبوهة")} value={stats?.suspicious_orders ?? 0} tone="amber" />
+            <FraudMetric label={t("High-risk orders", "طلبات عالية الخطورة")} value={stats?.high_risk_orders ?? 0} tone="red" />
+          </div>
+
+          <div className="rounded-3xl bg-[#F8FAFC] p-4">
+            <div className="mb-3 flex items-center gap-2">
+              <ShieldAlert className="h-4 w-4 text-[#1E4A8C]" />
+              <h3 className="text-sm font-black">{t("Highest Fraud Scores", "أعلى Fraud Scores")}</h3>
+            </div>
+            <div className="space-y-2">
+              {(stats?.latest ?? []).map((order) => (
+                <div key={order.id} className="flex items-center justify-between gap-3 rounded-2xl bg-white px-3 py-2 shadow-sm">
+                  <div>
+                    <p className="text-sm font-black">{order.public_order_number}</p>
+                    <p className="text-xs font-bold text-[#667085]" dir="ltr">{order.phone_e164}</p>
+                  </div>
+                  <span className={`rounded-full px-3 py-1 text-xs font-black ${riskClass(order.risk_level)}`}>
+                    {order.risk_score}/100 · {order.risk_level}
+                  </span>
+                </div>
+              ))}
+              {!stats?.latest.length ? <EmptyState text={t("No suspicious orders in this period.", "ماكايناش طلبات مشبوهة فهاد الفترة.")} /> : null}
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-3xl border border-gray-100 bg-white p-4 shadow-sm">
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <div>
+              <h3 className="text-sm font-black">{t("Fraud Settings", "إعدادات الحماية")}</h3>
+              <p className="mt-1 text-xs font-bold text-[#667085]">{t("Default duplicate lock is 2 hours.", "الافتراضي يمنع التكرار لمدة ساعتين.")}</p>
+            </div>
+            {settings ? (
+              <button
+                onClick={() => updateSetting("enabled", !settings.enabled)}
+                className={`rounded-full px-3 py-1.5 text-xs font-black ${settings.enabled ? "bg-emerald-50 text-emerald-700" : "bg-gray-100 text-gray-600"}`}
+              >
+                {settings.enabled ? t("Enabled", "مفعّل") : t("Disabled", "موقوف")}
+              </button>
+            ) : null}
+          </div>
+
+          {settings ? (
+            <>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <FraudNumberInput label={t("Lock period (minutes)", "مدة المنع بالدقائق")} value={settings.lock_period_minutes} onChange={(v) => updateSetting("lock_period_minutes", v)} />
+                <FraudNumberInput label={t("Medium threshold", "عتبة Medium")} value={settings.medium_risk_threshold} onChange={(v) => updateSetting("medium_risk_threshold", v)} />
+                <FraudNumberInput label={t("High threshold", "عتبة High")} value={settings.high_risk_threshold} onChange={(v) => updateSetting("high_risk_threshold", v)} />
+                <FraudNumberInput label={t("IP window (minutes)", "نافذة IP بالدقائق")} value={settings.ip_window_minutes} onChange={(v) => updateSetting("ip_window_minutes", v)} />
+                <FraudNumberInput label={t("IP order limit", "حد الطلبات لنفس IP")} value={settings.ip_order_limit} onChange={(v) => updateSetting("ip_order_limit", v)} />
+                <FraudNumberInput label={t("Device phone limit", "حد الأرقام لنفس الجهاز")} value={settings.device_phone_limit} onChange={(v) => updateSetting("device_phone_limit", v)} />
+                <FraudNumberInput label={t("Rapid submit (seconds)", "السرعة بالثواني")} value={settings.rapid_submit_seconds} onChange={(v) => updateSetting("rapid_submit_seconds", v)} />
+              </div>
+              <button
+                onClick={() => void onSave(settings)}
+                disabled={saving}
+                className="mt-4 w-full rounded-2xl bg-[#102033] px-5 py-3 text-sm font-black text-white transition hover:bg-[#1E4A8C] disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {saving ? t("Saving...", "جار الحفظ...") : t("Save Fraud Settings", "حفظ إعدادات الحماية")}
+              </button>
+            </>
+          ) : (
+            <EmptyState text={t("Loading fraud settings...", "تحميل إعدادات الحماية...")} />
+          )}
+        </div>
+      </div>
+    </Card>
+  );
+}
+
+function FraudMetric({ label, value, tone }: { label: string; value: number; tone: "red" | "amber" }) {
+  const toneClass = tone === "red" ? "bg-red-50 text-red-700" : "bg-amber-50 text-amber-700";
+  return (
+    <div className="rounded-3xl border border-gray-100 bg-white p-4 shadow-sm">
+      <p className="text-xs font-black text-[#667085]">{label}</p>
+      <p className="mt-2 text-3xl font-black">{value}</p>
+      <span className={`mt-3 inline-flex rounded-full px-3 py-1 text-xs font-black ${toneClass}`}>Fraud</span>
+    </div>
+  );
+}
+
+function FraudNumberInput({ label, value, onChange }: { label: string; value: number; onChange: (value: number) => void }) {
+  return (
+    <label className="block">
+      <span className="mb-1 block text-xs font-black text-[#667085]">{label}</span>
+      <input
+        type="number"
+        min={0}
+        value={value}
+        onChange={(event) => onChange(Number(event.target.value))}
+        className="w-full rounded-2xl border border-gray-200 px-3 py-2 text-sm font-bold outline-none focus:border-[#1E4A8C]"
+      />
+    </label>
+  );
+}
+
 function GranularityToggle({ value, setValue, lang }: { value: Granularity; setValue: (v: Granularity) => void; lang: Lang }) {
   const options: { id: Granularity; en: string; ar: string }[] = [
     { id: "daily", en: "Daily", ar: "يومي" },
@@ -859,6 +1033,9 @@ function OrderRow({ lang, order, onStatusChange }: { lang: Lang; order: AdminOrd
       <td className="px-3 py-4">x{order.hero_qty}</td>
       <td className="px-3 py-4 font-black">{formatMad(order.total_mad)}</td>
       <td className="px-3 py-4">
+        <span className={`rounded-full px-3 py-1 text-xs font-black ${riskClass(order.risk_level)}`}>{order.risk_score}/100</span>
+      </td>
+      <td className="px-3 py-4">
         <span className={`rounded-full px-3 py-1 text-xs font-black ${sheetClass(order.sheet_sync_status)}`}>{order.sheet_sync_status}</span>
       </td>
       <td className="px-3 py-4">
@@ -925,6 +1102,12 @@ function sheetClass(status: string) {
   if (status === "failed") return "bg-red-50 text-red-700";
   if (status === "pending") return "bg-amber-50 text-amber-700";
   return "bg-gray-100 text-gray-700";
+}
+
+function riskClass(level: string) {
+  if (level === "high") return "bg-red-50 text-red-700";
+  if (level === "medium") return "bg-amber-50 text-amber-700";
+  return "bg-emerald-50 text-emerald-700";
 }
 
 function formatDate(value: string, lang: Lang) {
