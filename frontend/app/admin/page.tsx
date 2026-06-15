@@ -284,6 +284,13 @@ export default function AdminDashboardPage() {
               {t("Pixels & Tracking", "البيكسلات والتتبع")}
             </Link>
             <Link
+              href="/admin/product-links"
+              className="flex items-center gap-2 rounded-full bg-white/15 px-4 py-2 text-sm font-black text-white transition hover:bg-white/25"
+            >
+              <Package className="h-4 w-4" />
+              {t("Product Links", "روابط المنتجات")}
+            </Link>
+            <Link
               href="/admin/call-center"
               className="flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-black text-[#1E4A8C] transition hover:bg-white/90"
             >

@@ -31,6 +31,28 @@ const COD_BENEFITS = [
   "🚚 توصيل لجميع مدن المغرب",
 ];
 
+const UTM_KEYS = [
+  "utm_source",
+  "utm_medium",
+  "utm_campaign",
+  "utm_content",
+  "utm_term",
+  "fbclid",
+  "ttclid",
+  "gclid",
+  "product_link_id",
+  "product_link_slug",
+];
+
+function getTrackingParams(): Record<string, string> {
+  if (typeof window === "undefined") return {};
+  const params = new URLSearchParams(window.location.search);
+  return Object.fromEntries(UTM_KEYS.flatMap((key) => {
+    const value = params.get(key);
+    return value ? [[key, value]] : [];
+  }));
+}
+
 const PROBLEM_SOLUTIONS = [
   {
     pain: "التحاليل ولات كتقلقك كل مرة",
@@ -190,6 +212,7 @@ function DirectCodOrderForm({ embedded = false }: { embedded?: boolean } = {}) {
         qty: selectedOffer.qty,
         price_mad: selectedOffer.priceMad,
         sku: HERO_PRODUCT.sku,
+        utm: getTrackingParams(),
         event_id: eventId,
       });
 

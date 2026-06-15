@@ -5,6 +5,7 @@ from app.api.routes.admin import router as admin_router
 from app.api.routes.digylog import router as digylog_router
 from app.api.routes.health import router as health_router
 from app.api.routes.orders import router as orders_router
+from app.api.routes.product_links import router as product_links_router
 from app.api.routes.tracking import router as tracking_router
 from app.core.config import get_settings
 
@@ -24,6 +25,7 @@ app.include_router(health_router, prefix="/v1")
 app.include_router(orders_router, prefix="/v1")
 app.include_router(admin_router, prefix="/v1")
 app.include_router(tracking_router, prefix="/v1")
+app.include_router(product_links_router, prefix="/v1")
 app.include_router(digylog_router, prefix="/v1")
 
 

@@ -484,6 +484,106 @@ export async function upsertTrackingSpend(adminKey: string, platform: string, da
   });
 }
 
+export type ProductLinkPlatform = "tiktok" | "meta" | "google" | "youtube" | "other";
+export type ProductLinkStatus = "active" | "disabled" | "archived";
+
+export interface ProductLinkStats {
+  total_clicks: number;
+  total_visitors: number;
+  total_orders: number;
+  confirmed_orders: number;
+  delivered_orders: number;
+  conversion_rate: number;
+}
+
+export interface ProductLink {
+  id: string;
+  slug: string;
+  public_url: string;
+  name: string;
+  full_url: string;
+  product_name: string;
+  platform: ProductLinkPlatform;
+  campaign_name: string | null;
+  ad_account_name: string | null;
+  notes: string | null;
+  status: ProductLinkStatus;
+  created_at: string;
+  updated_at: string;
+  archived_at: string | null;
+  stats: ProductLinkStats;
+}
+
+export interface ProductLinkPayload {
+  slug?: string;
+  name?: string;
+  full_url?: string;
+  product_name?: string;
+  platform?: ProductLinkPlatform;
+  campaign_name?: string | null;
+  ad_account_name?: string | null;
+  notes?: string | null;
+  status?: ProductLinkStatus;
+}
+
+export async function getProductLinks(
+  adminKey: string,
+  params: { q?: string; platform?: string; status?: string; days?: number } = {}
+): Promise<{ total: number; links: ProductLink[] }> {
+  const search = new URLSearchParams();
+  Object.entries(params).forEach(([k, v]) => {
+    if (v !== undefined && v !== "") search.set(k, String(v));
+  });
+  return api<{ total: number; links: ProductLink[] }>(`/v1/admin/product-links?${search.toString()}`, {
+    headers: { "X-Admin-Key": adminKey },
+  });
+}
+
+export async function createProductLink(adminKey: string, payload: ProductLinkPayload): Promise<ProductLink> {
+  return api<ProductLink>(`/v1/admin/product-links`, {
+    method: "POST",
+    headers: { "X-Admin-Key": adminKey },
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updateProductLink(adminKey: string, id: string, payload: ProductLinkPayload): Promise<ProductLink> {
+  return api<ProductLink>(`/v1/admin/product-links/${id}`, {
+    method: "PATCH",
+    headers: { "X-Admin-Key": adminKey },
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function duplicateProductLink(adminKey: string, id: string): Promise<ProductLink> {
+  return api<ProductLink>(`/v1/admin/product-links/${id}/duplicate`, {
+    method: "POST",
+    headers: { "X-Admin-Key": adminKey },
+    body: JSON.stringify({}),
+  });
+}
+
+export async function deleteProductLink(adminKey: string, id: string, pin: string): Promise<{ ok: boolean }> {
+  return api<{ ok: boolean }>(`/v1/admin/product-links/${id}/delete`, {
+    method: "POST",
+    headers: { "X-Admin-Key": adminKey },
+    body: JSON.stringify({ pin }),
+  });
+}
+
+export async function bulkProductLinks(
+  adminKey: string,
+  ids: string[],
+  action: ProductLinkStatus | "delete",
+  pin?: string
+): Promise<{ updated: number }> {
+  return api<{ updated: number }>(`/v1/admin/product-links/bulk`, {
+    method: "POST",
+    headers: { "X-Admin-Key": adminKey },
+    body: JSON.stringify({ ids, action, pin }),
+  });
+}
+
 export async function getConfirmationPayout(adminKey: string, details = false): Promise<ConfirmationPayout> {
   return api<ConfirmationPayout>(`/v1/admin/confirmation-payouts${details ? "?details=true" : ""}`, {
     headers: { "X-Admin-Key": adminKey },
