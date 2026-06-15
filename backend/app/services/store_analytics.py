@@ -324,13 +324,14 @@ def _geo(db: Session, start: datetime, end: datetime) -> list[StoreGeoMetric]:
 
 
 def _customers(db: Session, start: datetime, end: datetime) -> StoreCustomerAnalytics:
-    all_orders = db.query(Order).all()
-    by_phone = defaultdict(list)
-    for order in all_orders:
-        by_phone[order.phone_e164].append(order)
-    period_orders = [o for o in all_orders if start <= o.created_at < end]
+    # Count lifetime orders per phone in SQL (avoids Python-side datetime
+    # comparisons, which break when the driver returns naive datetimes).
+    orders_per_phone = Counter(
+        {phone: int(count or 0) for phone, count in db.query(Order.phone_e164, func.count(Order.id)).group_by(Order.phone_e164).all()}
+    )
+    period_orders = _orders_between(db, start, end).all()
     period_customers = {o.phone_e164 for o in period_orders}
-    returning = sum(1 for phone in period_customers if len(by_phone[phone]) > 1)
+    returning = sum(1 for phone in period_customers if orders_per_phone[phone] > 1)
     total_customers = len(period_customers)
     revenue = sum(o.total_mad for o in period_orders)
     return StoreCustomerAnalytics(
