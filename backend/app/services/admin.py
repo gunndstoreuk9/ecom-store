@@ -9,6 +9,8 @@ from sqlalchemy.orm import Session, selectinload
 
 from app.core.config import get_settings
 from app.models.order import Order, OrderItem
+from app.services.hashing import sha256_hex
+from app.services.phone import meta_phone_hash_input, normalize_morocco_phone, tiktok_phone_hash_input, to_local_morocco_phone
 from app.services.digylog import DigylogError, push_order_to_digylog
 from app.schemas.admin import (
     CALL_STATUS_TO_ORDER_STATUS,
@@ -165,6 +167,8 @@ def update_admin_order_details(
     order_id: str,
     *,
     customer_name: Optional[str] = None,
+    phone_raw: Optional[str] = None,
+    phone_e164: Optional[str] = None,
     address: Optional[str] = None,
     city: Optional[str] = None,
     delivery_city: Optional[str] = None,
@@ -181,6 +185,18 @@ def update_admin_order_details(
 
     if customer_name is not None:
         order.customer_name = customer_name.strip()
+    if phone_raw is not None or phone_e164 is not None:
+        normalized_phone = normalize_morocco_phone(phone_e164 or phone_raw or order.phone_e164)
+        order.phone_raw = (phone_raw or normalized_phone).strip()
+        order.phone_e164 = normalized_phone
+        order.phone_local = to_local_morocco_phone(normalized_phone)
+        order.phone_hash_meta = sha256_hex(meta_phone_hash_input(normalized_phone))
+        order.phone_hash_tiktok = sha256_hex(tiktok_phone_hash_input(normalized_phone))
+        order.delivery_error = None
+        order.delivery_tracking = None
+        order.dispatched_at = None
+        if order.status == "shipped":
+            order.status = "confirmed"
     if address is not None:
         order.address = address.strip() or None
     if city is not None:

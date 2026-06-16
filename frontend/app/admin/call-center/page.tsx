@@ -19,6 +19,7 @@ import {
   updateAdminOrderCall,
 } from "@/lib/api";
 import { formatMad } from "@/lib/currency";
+import { isValidMoroccoMobile, toE164MoroccoPhone } from "@/lib/phone";
 import { DELIVERY_COMPANY, DIGYLOG_CITIES, cleanCityName } from "@/config/digylog";
 import { HERO_OFFERS } from "@/config/offers";
 
@@ -160,6 +161,9 @@ export default function CallCenterPage() {
     setOrders((current) => {
       // In contact queues a handled order leaves the list once it changes state.
       if ((tab === "new" || tab === "follow_up") && updated.status !== "new") {
+        return current.filter((o) => o.id !== updated.id);
+      }
+      if (tab === "blacklist" && !isBlacklisted(updated)) {
         return current.filter((o) => o.id !== updated.id);
       }
       return current.map((o) => (o.id === updated.id ? updated : o));
@@ -372,6 +376,7 @@ export default function CallCenterPage() {
               lang={lang}
               adminKey={currentKey}
               dispatchMode={isDispatch}
+              blacklistMode={tab === "blacklist"}
               selected={selected.has(order.id)}
               onToggleSelect={() => toggleSelected(order.id)}
               onSaved={onSaved}
@@ -649,6 +654,7 @@ function CallCard({
   lang,
   adminKey,
   dispatchMode,
+  blacklistMode,
   selected,
   onToggleSelect,
   onSaved,
@@ -658,6 +664,7 @@ function CallCard({
   lang: Lang;
   adminKey: string;
   dispatchMode: boolean;
+  blacklistMode: boolean;
   selected: boolean;
   onToggleSelect: () => void;
   onSaved: (order: AdminOrder) => void;
@@ -667,6 +674,7 @@ function CallCard({
   const t = (en: string, ar: string) => (isArabic ? ar : en);
   const [disposition, setDisposition] = useState<string>("");
   const [name, setName] = useState<string>(order.customer_name);
+  const [phone, setPhone] = useState<string>(order.phone_local || order.phone_e164);
   const [qty, setQty] = useState<number>(order.hero_qty);
   const [total, setTotal] = useState<number>(order.total_mad);
   const [address, setAddress] = useState<string>(order.address ?? "");
@@ -680,6 +688,7 @@ function CallCard({
 
   const detailsChanged =
     name.trim() !== order.customer_name ||
+    (blacklistMode && phone.trim() !== (order.phone_local || order.phone_e164)) ||
     qty !== order.hero_qty ||
     total !== order.total_mad ||
     address.trim() !== (order.address ?? "") ||
@@ -698,8 +707,12 @@ function CallCard({
     try {
       let updated = order;
       if (detailsChanged) {
+        if (blacklistMode && !isValidMoroccoMobile(phone)) {
+          throw new Error(t("Enter a valid Moroccan phone number.", "دخل رقم هاتف مغربي صحيح."));
+        }
         updated = await editAdminOrder(adminKey, order.id, {
           customer_name: name.trim(),
+          ...(blacklistMode ? { phone_raw: phone.trim(), phone_e164: toE164MoroccoPhone(phone) } : {}),
           qty,
           total_mad: total,
           address: address.trim(),
@@ -778,6 +791,22 @@ function CallCard({
           <label className="mb-1 block text-[11px] font-black text-[#667085]">{t("Customer", "الزبون")}</label>
           <input value={name} onChange={(e) => setName(e.target.value)} className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm font-bold outline-none focus:border-[#1E4A8C]" />
         </div>
+        {blacklistMode ? (
+          <div className="rounded-2xl border border-red-100 bg-red-50 p-3">
+            <label className="mb-1 block text-[11px] font-black text-red-700">{t("Edit phone number", "تعديل رقم الهاتف")}</label>
+            <input
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              dir="ltr"
+              inputMode="tel"
+              placeholder="0612345678"
+              className="w-full rounded-xl border border-red-200 bg-white px-3 py-2 text-sm font-black outline-none focus:border-red-500"
+            />
+            <p className="mt-1 text-[11px] font-bold text-red-700">
+              {t("Only available in Blacklist to correct rejected Digylog phone numbers.", "متاح فقط فـ Blacklist باش تصلح الرقم المرفوض من Digylog.")}
+            </p>
+          </div>
+        ) : null}
         <div>
           <label className="mb-1 block text-[11px] font-black text-[#667085]">{t("Offer", "العرض")}</label>
           <div className="flex flex-wrap gap-2">

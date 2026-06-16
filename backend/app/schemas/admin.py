@@ -187,6 +187,8 @@ class AdminOrderCallUpdate(BaseModel):
 
 class AdminOrderEditUpdate(BaseModel):
     customer_name: Optional[str] = Field(default=None, min_length=2, max_length=160)
+    phone_raw: Optional[str] = Field(default=None, min_length=8, max_length=64)
+    phone_e164: Optional[str] = Field(default=None, max_length=16)
     address: Optional[str] = Field(default=None, max_length=2000)
     city: Optional[str] = Field(default=None, max_length=120)
     delivery_city: Optional[str] = Field(default=None, max_length=120)

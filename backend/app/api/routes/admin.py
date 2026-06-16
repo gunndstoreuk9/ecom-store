@@ -201,16 +201,21 @@ async def admin_update_order_details(
     db: Session = Depends(get_db),
 ) -> AdminOrderListItem:
     payload = await _parse_body(request, AdminOrderEditUpdate)
-    order = update_admin_order_details(
-        db,
-        order_id,
-        customer_name=payload.customer_name,
-        address=payload.address,
-        city=payload.city,
-        delivery_city=payload.delivery_city,
-        qty=payload.qty,
-        total_mad=payload.total_mad,
-    )
+    try:
+        order = update_admin_order_details(
+            db,
+            order_id,
+            customer_name=payload.customer_name,
+            phone_raw=payload.phone_raw,
+            phone_e164=payload.phone_e164,
+            address=payload.address,
+            city=payload.city,
+            delivery_city=payload.delivery_city,
+            qty=payload.qty,
+            total_mad=payload.total_mad,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc))
     if not order:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
     return order

@@ -133,6 +133,8 @@ export interface AdminOrderCallPayload {
 
 export interface AdminOrderEditPayload {
   customer_name?: string;
+  phone_raw?: string;
+  phone_e164?: string;
   address?: string;
   city?: string;
   delivery_city?: string;
