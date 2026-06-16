@@ -753,7 +753,7 @@ function CallCard({
       ) : null}
       {order.delivery_error ? (
         <p className="mt-3 rounded-xl bg-red-50 px-3 py-2 text-xs font-black text-red-700">
-          {t("Dispatch failed", "فشل الإرسال")}: {order.delivery_error}
+          {t("Dispatch failed", "فشل الإرسال")}: {formatDeliveryError(order.delivery_error, order, lang)}
         </p>
       ) : null}
 
@@ -955,6 +955,22 @@ function errorMessage(err: unknown, lang: Lang) {
 function isBlacklisted(order: AdminOrder) {
   const message = (order.delivery_error || "").toLowerCase();
   return message.includes("liste noire") || message.includes("blacklist");
+}
+
+function formatDeliveryError(message: string, order: AdminOrder, lang: Lang) {
+  const lower = message.toLowerCase();
+  if (lower.includes("liste noire") || lower.includes("blacklist")) {
+    const phone = order.phone_local || order.phone_e164;
+    return lang === "ar"
+      ? `هذا الرقم موجود في القائمة السوداء لدى Digylog ولا يمكن إرساله: ${phone}`
+      : `This phone number is blacklisted by Digylog and cannot be dispatched: ${phone}`;
+  }
+  if (lower.includes("returned no tracking reference")) {
+    return lang === "ar"
+      ? "قبلت Digylog الطلب ولكن لم ترجع رقم تتبع. راجع الطلب داخل منصة Digylog."
+      : "Digylog accepted the order but returned no tracking number. Check the order in Digylog.";
+  }
+  return message;
 }
 
 function fallbackError(lang: Lang) {

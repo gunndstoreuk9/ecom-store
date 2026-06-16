@@ -184,6 +184,33 @@ def _extract_tracking(data: object, order_num: str) -> Optional[str]:
     return search(data)
 
 
+def _extract_errors(data: object, order_num: str) -> list[str]:
+    errors: list[str] = []
+
+    def visit(node: object) -> None:
+        if isinstance(node, dict):
+            if node.get("num") == order_num and isinstance(node.get("errors"), list):
+                errors.extend(str(item) for item in node["errors"])
+            for value in node.values():
+                visit(value)
+        elif isinstance(node, list):
+            for value in node:
+                visit(value)
+
+    visit(data)
+    return errors
+
+
+def _human_digylog_error(data: object, order: Order) -> str:
+    raw_errors = _extract_errors(data, order.public_order_number)
+    joined = " ".join(raw_errors).lower()
+    if "liste noire" in joined or "blacklist" in joined:
+        return f"هذا الرقم موجود في القائمة السوداء لدى Digylog ولا يمكن إرساله: {order.phone_local or order.phone_e164}"
+    if raw_errors:
+        return "رفضت Digylog هذا الطلب: " + " | ".join(raw_errors)
+    return "قبلت Digylog الطلب ولكن لم ترجع رقم تتبع. راجع الطلب داخل منصة Digylog."
+
+
 def push_order_to_digylog(order: Order) -> Optional[str]:
     """Create (and send) an order on Digylog. Returns a tracking ref if provided.
 
@@ -217,6 +244,5 @@ def push_order_to_digylog(order: Order) -> Optional[str]:
 
     tracking = _extract_tracking(data, order.public_order_number)
     if not tracking:
-        preview = str(data)[:600].replace("\n", " ")
-        raise DigylogError(f"Digylog accepted the request but returned no tracking reference: {preview}")
+        raise DigylogError(_human_digylog_error(data, order))
     return tracking
