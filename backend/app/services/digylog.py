@@ -212,5 +212,11 @@ def push_order_to_digylog(order: Order) -> Optional[str]:
     try:
         data = response.json()
     except ValueError:
-        return None
-    return _extract_tracking(data, order.public_order_number)
+        preview = response.text[:400].replace("\n", " ")
+        raise DigylogError(f"Digylog returned a non-JSON response: {preview}")
+
+    tracking = _extract_tracking(data, order.public_order_number)
+    if not tracking:
+        preview = str(data)[:600].replace("\n", " ")
+        raise DigylogError(f"Digylog accepted the request but returned no tracking reference: {preview}")
+    return tracking
