@@ -42,12 +42,13 @@ const CALL_VALUE_TO_API: Record<string, string> = {
   annule: "cancelled",
 };
 
-type TabValue = "new" | "follow_up" | "confirmed" | "all";
+type TabValue = "new" | "follow_up" | "confirmed" | "blacklist" | "all";
 
 const TABS: { value: TabValue; fr: string; ar: string }[] = [
   { value: "new", fr: "Nouvelles", ar: "طلبات جديدة" },
   { value: "follow_up", fr: "À relancer", ar: "للمتابعة" },
   { value: "confirmed", fr: "À expédier", ar: "للإرسال" },
+  { value: "blacklist", fr: "Blacklist", ar: "Blacklist" },
   { value: "all", fr: "Toutes", ar: "الكل" },
 ];
 
@@ -57,7 +58,7 @@ export default function CallCenterPage() {
   const [savedKey, setSavedKey] = useState("");
   const [orders, setOrders] = useState<AdminOrder[]>([]);
   const [stats, setStats] = useState<AdminCallCenterStats | null>(null);
-  const [counts, setCounts] = useState<{ new: number; follow_up: number; confirmed: number }>({ new: 0, follow_up: 0, confirmed: 0 });
+  const [counts, setCounts] = useState<{ new: number; follow_up: number; confirmed: number; blacklist: number }>({ new: 0, follow_up: 0, confirmed: 0, blacklist: 0 });
   const [showStats, setShowStats] = useState(true);
   const [tab, setTab] = useState<TabValue>("new");
   const [query, setQuery] = useState("");
@@ -104,12 +105,13 @@ export default function CallCenterPage() {
   async function refreshCounts(key = currentKey) {
     if (!key) return;
     try {
-      const [n, f, c] = await Promise.all([
+      const [n, f, c, b] = await Promise.all([
         getAdminOrders(key, { limit: 1, bucket: "new" }),
         getAdminOrders(key, { limit: 1, bucket: "follow_up" }),
         getAdminOrders(key, { limit: 1, bucket: "confirmed" }),
+        getAdminOrders(key, { limit: 1, bucket: "blacklist" }),
       ]);
-      setCounts({ new: n.total, follow_up: f.total, confirmed: c.total });
+      setCounts({ new: n.total, follow_up: f.total, confirmed: c.total, blacklist: b.total });
     } catch {
       // counts are non-blocking
     }
@@ -179,8 +181,18 @@ export default function CallCenterPage() {
     setLoading(true);
     setError(null);
     try {
-      await dispatchOrders(currentKey, ids, DELIVERY_COMPANY);
-      setOrders((current) => current.filter((o) => !selected.has(o.id)));
+      const result = await dispatchOrders(currentKey, ids, DELIVERY_COMPANY);
+      const updatedById = new Map(result.orders.map((order) => [order.id, order]));
+      setOrders((current) =>
+        current
+          .map((order) => updatedById.get(order.id) ?? order)
+          .filter((order) => {
+            if (!selected.has(order.id)) return true;
+            if (order.delivery_tracking) return false;
+            if (isBlacklisted(order)) return false;
+            return true;
+          })
+      );
       setSelected(new Set());
       void loadStats();
       void refreshCounts();
@@ -938,6 +950,11 @@ function errorMessage(err: unknown, lang: Lang) {
   if (err instanceof ApiError) return typeof err.message === "string" ? err.message : fallbackError(lang);
   if (err instanceof Error) return err.message;
   return fallbackError(lang);
+}
+
+function isBlacklisted(order: AdminOrder) {
+  const message = (order.delivery_error || "").toLowerCase();
+  return message.includes("liste noire") || message.includes("blacklist");
 }
 
 function fallbackError(lang: Lang) {

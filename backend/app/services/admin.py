@@ -39,6 +39,7 @@ CANCELLED_STATUSES = {"cancelled", "no_answer"}
 CONTACTABLE_STATUSES = {"new", "no_answer", "awaiting_confirmation"}
 # Orders in these states are already handled and should not appear in contact queues.
 NON_CONTACT_STATUSES = {"cancelled", "refused", "delivered", "returned", "shipped", "packed", "confirmed"}
+BLACKLIST_ERROR_PATTERNS = ("%liste noire%", "%blacklist%")
 
 
 def list_admin_orders(
@@ -237,7 +238,11 @@ def dispatch_orders(
                     order.dispatched_at = now
             except DigylogError as exc:
                 order.delivery_error = str(exc)
-                # keep status as-is so the agent can retry the failed dispatch
+                order.delivery_tracking = None
+                order.dispatched_at = None
+                if order.status == new_status or order.status == "shipped":
+                    order.status = "confirmed"
+                # keep failed dispatches out of shipped/payout queues; agents can review or retry.
         else:
             order.status = new_status
             if order.dispatched_at is None:
@@ -363,10 +368,13 @@ def _apply_order_filters(
         query = query.filter(Order.call_status.is_(None), Order.status.notin_(NON_CONTACT_STATUSES))
     elif bucket == "follow_up":
         query = query.filter(Order.call_status.in_(RETRY_CALL_STATUSES))
+    elif bucket == "blacklist":
+        query = _blacklist_filter(query)
     elif bucket == "contactable":
         query = query.filter(Order.status.in_(CONTACTABLE_STATUSES))
     elif bucket == "confirmed":
         query = query.filter(Order.status == "confirmed")
+        query = _not_blacklist_filter(query)
     elif bucket == "shipped":
         query = query.filter(Order.status == "shipped")
     if status:
@@ -394,6 +402,14 @@ def _apply_order_filters(
     if date_to:
         query = query.filter(Order.created_at <= datetime.combine(date_to, time.max, tzinfo=timezone.utc))
     return query
+
+
+def _blacklist_filter(query):
+    return query.filter(or_(*[Order.delivery_error.ilike(pattern) for pattern in BLACKLIST_ERROR_PATTERNS]))
+
+
+def _not_blacklist_filter(query):
+    return query.filter(or_(Order.delivery_error.is_(None), ~or_(*[Order.delivery_error.ilike(pattern) for pattern in BLACKLIST_ERROR_PATTERNS])))
 
 
 def _to_admin_order_item(item: OrderItem) -> AdminOrderItem:

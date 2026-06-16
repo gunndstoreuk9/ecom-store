@@ -32,7 +32,11 @@ def _get_or_create_state(db: Session) -> ConfirmationPayoutState:
 
 def _eligible_query(db: Session, state: ConfirmationPayoutState):
     """Orders confirmed and successfully sent to delivery since the last reset."""
-    query = db.query(Order).filter(Order.dispatched_at.isnot(None))
+    query = db.query(Order).filter(
+        Order.dispatched_at.isnot(None),
+        Order.delivery_tracking.isnot(None),
+        Order.delivery_error.is_(None),
+    )
     if state.last_reset_at is not None:
         query = query.filter(Order.dispatched_at > state.last_reset_at)
     return query
