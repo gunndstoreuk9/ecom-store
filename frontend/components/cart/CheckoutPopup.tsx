@@ -10,7 +10,7 @@ import { ApiError, createOrder } from "@/lib/api";
 import { isValidMoroccoMobile, toE164MoroccoPhone } from "@/lib/phone";
 import { getBrowserFingerprint, getDeviceId } from "@/lib/fingerprint";
 import { generateEventId } from "@/lib/event-id";
-import { trackLead } from "@/lib/tracking";
+import { trackLead, trackPurchase } from "@/lib/tracking";
 import { formatMad } from "@/lib/currency";
 import { HERO_PRODUCT } from "@/config/products";
 import { useRouter } from "next/navigation";
@@ -71,6 +71,7 @@ export function CheckoutPopup() {
       });
 
       trackLead({ value: selectedOffer.priceMad, eventId });
+      trackPurchase({ value: selectedOffer.priceMad, eventId });
       setLastOrderId(order.order_id);
       closeCheckout();
       router.push(`/thank-you?order_id=${order.order_id}`);

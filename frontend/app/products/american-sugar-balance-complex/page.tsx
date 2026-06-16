@@ -16,7 +16,7 @@ import { ApiError, createOrder } from "@/lib/api";
 import { generateEventId } from "@/lib/event-id";
 import { getBrowserFingerprint, getDeviceId } from "@/lib/fingerprint";
 import { isValidMoroccoMobile, toE164MoroccoPhone } from "@/lib/phone";
-import { trackLead } from "@/lib/tracking";
+import { trackLead, trackPurchase } from "@/lib/tracking";
 
 const orderSchema = z.object({
   name: z.string().min(2, "الاسم ضروري"),
@@ -223,6 +223,7 @@ function DirectCodOrderForm({ embedded = false }: { embedded?: boolean } = {}) {
       });
 
       trackLead({ value: selectedOffer.priceMad, eventId });
+      trackPurchase({ value: selectedOffer.priceMad, eventId });
       router.push(`/thank-you?order_id=${order.order_id}`);
     } catch (error) {
       console.error("Order creation failed", error);

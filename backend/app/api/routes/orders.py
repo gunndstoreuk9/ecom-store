@@ -9,7 +9,7 @@ from app.schemas.order import CreateOrderRequest, OrderDetailResponse, OrderResp
 from app.services.fraud import DuplicateOrderError
 from app.services.orders import create_order, get_order, to_order_detail_response, to_order_response
 from app.services.sheets import sync_order_to_sheet
-from app.services.tracking import create_noop_conversion_events
+from app.services.tracking import send_order_tracking_events
 
 router = APIRouter(prefix="/orders", tags=["orders"])
 
@@ -32,7 +32,7 @@ async def create_order_endpoint(
         order = create_order(db, payload, client_ip=client_ip, user_agent=user_agent)
     except DuplicateOrderError as exc:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=exc.message)
-    create_noop_conversion_events(db, order)
+    background_tasks.add_task(send_order_tracking_events, str(order.id), SessionLocal)
     background_tasks.add_task(sync_order_to_sheet, str(order.id), SessionLocal)
     return to_order_response(order)
 

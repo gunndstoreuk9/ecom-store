@@ -55,7 +55,13 @@ export function trackPurchase(params: { value: number; eventId?: string }) {
     window.fbq("track", "Purchase", { value: params.value, currency: "MAD" }, { eventID: params.eventId });
   }
   if (SITE.tiktokPixelId && window.ttq) {
-    window.ttq.track("CompletePayment", { value: params.value, currency: "MAD", event_id: params.eventId });
+    window.ttq.track("CompletePayment", {
+      value: params.value,
+      currency: "MAD",
+      content_type: "product",
+      contents: [{ content_id: "TOPLUX-BSC-940-60", quantity: 1, price: params.value }],
+      event_id: params.eventId,
+    });
   }
   if (SITE.googleTagId && window.gtag) {
     window.gtag("event", "purchase", {
