@@ -188,7 +188,7 @@ export default function MiracleMenOilPage() {
             {REVIEWS.map((review) => (
               <div key={review.name} className="rounded-[28px] border border-white/10 bg-white/10 p-5">
                 <div className="mb-3 text-amber-300">★★★★★</div>
-                <p className="text-sm font-bold leading-7 text-white/85">"{review.text}"</p>
+                <p className="text-sm font-bold leading-7 text-white/85">«{review.text}»</p>
                 <p className="mt-4 text-sm font-black text-amber-200">{review.name}</p>
               </div>
             ))}
