@@ -106,9 +106,7 @@ export default function MiracleMenOilPage() {
             <p className="max-w-2xl text-lg font-bold leading-9 text-white/80">
               {PRODUCT.name} هو زيت عناية رجالية خارجي للرجال اللي باغين يحسو بقوة الحضور، يهربو من التوتر، ويرجعو اللحظة الخاصة بثقة أكبر وخصوصية كاملة.
             </p>
-            <button onClick={scrollToOrderForm} className="rounded-full bg-red-600 px-8 py-4 text-lg font-black text-white shadow-2xl shadow-red-950/40 transition hover:bg-red-700">
-              اطلب الآن بسرية — الدفع عند الاستلام
-            </button>
+            <DirectCodOrderForm embedded />
           </div>
           <div className="relative hidden lg:block">
             <div className="absolute -inset-5 rounded-[40px] bg-gradient-to-br from-red-600/35 to-amber-400/25 blur-2xl" />
@@ -140,8 +138,6 @@ export default function MiracleMenOilPage() {
           </div>
         </div>
       </section>
-
-      <DirectCodOrderForm />
 
       <section dir="rtl" className="bg-[#FFF7ED] py-12">
         <div className="container-main">
@@ -223,7 +219,7 @@ export default function MiracleMenOilPage() {
   );
 }
 
-function DirectCodOrderForm() {
+function DirectCodOrderForm({ embedded = false }: { embedded?: boolean } = {}) {
   const router = useRouter();
   const [selectedOfferId, setSelectedOfferId] = useState<OfferId>("three");
   const [submitting, setSubmitting] = useState(false);
@@ -271,6 +267,75 @@ function DirectCodOrderForm() {
     } finally {
       setSubmitting(false);
     }
+  }
+
+  if (embedded) {
+    return (
+      <div id="cod-order" className="rounded-[28px] border border-amber-300/20 bg-white p-3 text-[#102033] shadow-2xl md:p-4">
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <div>
+            <p className="text-sm font-black">اختر العرض المناسب:</p>
+            <p className="text-xs font-bold text-[#667085]">اختيارك الحالي ظاهر باللون الأحمر</p>
+          </div>
+          <span className="rounded-full bg-green-600 px-3 py-1 text-xs font-black text-white">COD ✓</span>
+        </div>
+
+        <div className="grid gap-2">
+          {HERO_OFFERS.map((offer) => (
+            <button
+              key={offer.id}
+              type="button"
+              onClick={() => setSelectedOfferId(offer.id)}
+              className={`relative rounded-2xl border-2 px-4 py-3 text-right transition ${
+                selectedOfferId === offer.id ? "border-red-600 bg-red-50" : "border-gray-200 bg-white hover:border-red-300"
+              }`}
+            >
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-base font-black text-[#102033]">{offer.sublabel}</p>
+                  <p className="text-[11px] font-bold text-[#667085]">{offer.savings || offer.label}</p>
+                </div>
+                <div className="text-left">
+                  <p className="text-xl font-black text-red-600">{formatMad(offer.priceMad)}</p>
+                  {offer.default ? <p className="text-[10px] font-black text-green-700">الأكثر طلباً</p> : null}
+                </div>
+              </div>
+            </button>
+          ))}
+        </div>
+
+        <form onSubmit={handleSubmit(onSubmit)} className="mt-3 space-y-3" noValidate>
+          <Field icon={User} placeholder="الاسم الكامل" error={errors.name?.message} props={register("name")} compact />
+          <Field icon={Phone} placeholder="رقم الهاتف المغربي" error={errors.phone?.message} props={register("phone")} type="tel" compact />
+          <Field icon={MapPin} placeholder="المدينة" error={errors.city?.message} props={register("city")} compact />
+
+          <div className="rounded-2xl bg-[#FFF7ED] p-3">
+            <div className="flex items-center justify-between text-xs font-bold text-[#667085]">
+              <span>العرض المختار</span>
+              <span>{selectedOffer.sublabel}</span>
+            </div>
+            <div className="mt-2 flex items-center justify-between border-t border-orange-100 pt-2">
+              <span className="text-sm font-black text-[#102033]">المبلغ عند الاستلام</span>
+              <span className="text-2xl font-black text-red-600">{formatMad(selectedOffer.priceMad)}</span>
+            </div>
+          </div>
+
+          <button disabled={submitting} className="min-h-[58px] w-full rounded-2xl bg-red-600 px-5 py-4 text-lg font-black text-white shadow-lg shadow-red-900/25 transition hover:bg-red-700 disabled:opacity-60">
+            {submitting ? "جاري تسجيل الطلب..." : "اطلب الآن بسرية — الدفع عند الاستلام"}
+          </button>
+
+          {submitError ? (
+            <p className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-center text-base font-extrabold leading-7 text-[#B91C1C]">
+              {submitError}
+            </p>
+          ) : null}
+
+          <p className="text-center text-[11px] font-bold leading-5 text-[#667085]">
+            بياناتك محمية · لا دفع مسبق · سنتصل بك للتأكيد قبل الإرسال
+          </p>
+        </form>
+      </div>
+    );
   }
 
   return (
@@ -358,7 +423,7 @@ function DirectCodOrderForm() {
               </div>
 
               <button disabled={submitting} className="min-h-[66px] w-full rounded-3xl bg-red-600 px-5 py-4 text-xl font-black text-white shadow-xl shadow-red-900/25 transition hover:bg-red-700 disabled:opacity-60">
-                {submitting ? "جاري تسجيل الطلب..." : "أكد طلبي الآن — الدفع عند الاستلام"}
+                {submitting ? "جاري تسجيل الطلب..." : "اطلب الآن بسرية — الدفع عند الاستلام"}
               </button>
 
               {submitError ? (
@@ -380,7 +445,21 @@ function DirectCodOrderForm() {
   );
 }
 
-function Field({ icon: Icon, placeholder, error, props, type = "text" }: { icon: LucideIcon; placeholder: string; error?: string; props: UseFormRegisterReturn; type?: string }) {
+function Field({
+  icon: Icon,
+  placeholder,
+  error,
+  props,
+  type = "text",
+  compact = false,
+}: {
+  icon: LucideIcon;
+  placeholder: string;
+  error?: string;
+  props: UseFormRegisterReturn;
+  type?: string;
+  compact?: boolean;
+}) {
   return (
     <div>
       <div className="flex overflow-hidden rounded-2xl border-2 border-gray-200 bg-white focus-within:border-red-600">
@@ -388,10 +467,10 @@ function Field({ icon: Icon, placeholder, error, props, type = "text" }: { icon:
           type={type}
           inputMode={type === "tel" ? "tel" : "text"}
           placeholder={placeholder}
-          className="min-h-[58px] flex-1 px-4 text-right text-lg font-bold outline-none placeholder:text-gray-400"
+          className={`${compact ? "min-h-[50px] text-base" : "min-h-[58px] text-lg"} flex-1 px-4 text-right font-bold outline-none placeholder:text-gray-400`}
           {...props}
         />
-        <span className="flex w-16 items-center justify-center border-r border-gray-200 bg-gray-50 text-[#160B08]">
+        <span className={`${compact ? "w-14" : "w-16"} flex items-center justify-center border-r border-gray-200 bg-gray-50 text-[#160B08]`}>
           <Icon className="h-5 w-5" />
         </span>
       </div>
