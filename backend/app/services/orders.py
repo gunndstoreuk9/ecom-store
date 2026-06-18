@@ -18,8 +18,16 @@ from app.services.phone import (
 )
 
 
-PRODUCT_NAME_AR = "المركّب الأمريكي لضبط السكر — الأصلي"
-PRODUCT_SHEET_SKU = "TOPLUX-BSC-940-60"
+PRODUCTS = {
+    "american-sugar-balance-complex": {
+        "name_ar": "المركّب الأمريكي لضبط السكر — الأصلي",
+        "sheet_sku": "TOPLUX-BSC-940-60",
+    },
+    "miracle-men-oil": {
+        "name_ar": "الزيت المعجزة للرجال",
+        "sheet_sku": "MIRACLE-MEN-OIL-30ML",
+    },
+}
 
 
 def create_order(
@@ -74,7 +82,7 @@ def create_order(
     order.items.append(
         OrderItem(
             sku=payload.sku,
-            name_ar=PRODUCT_NAME_AR,
+            name_ar=_product_name_ar(payload.sku),
             qty=offer["qty"],
             unit_price_mad=offer["price_mad"],
             total_price_mad=offer["price_mad"],
@@ -125,7 +133,7 @@ def to_order_detail_response(order: Order) -> OrderDetailResponse:
 
 def order_sheet_payload(order: Order) -> dict:
     created_at = order.created_at or datetime.now(timezone.utc)
-    product_skus = [PRODUCT_SHEET_SKU for _ in order.items] or [PRODUCT_SHEET_SKU]
+    product_skus = [_product_sheet_sku(getattr(item, "sku", order.hero_sku)) for item in order.items] or [_product_sheet_sku(order.hero_sku)]
     product_quantities = [str(item.qty) for item in order.items] or [str(order.hero_qty)]
 
     return {
@@ -147,3 +155,11 @@ def _next_public_order_number(db: Session) -> str:
 
 def _offer_id_from_qty(qty: int) -> str:
     return {1: "one", 2: "two", 3: "three"}.get(qty, "three")
+
+
+def _product_name_ar(sku: str) -> str:
+    return PRODUCTS.get(sku, PRODUCTS["american-sugar-balance-complex"])["name_ar"]
+
+
+def _product_sheet_sku(sku: str) -> str:
+    return PRODUCTS.get(sku, PRODUCTS["american-sugar-balance-complex"])["sheet_sku"]

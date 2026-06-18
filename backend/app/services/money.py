@@ -1,7 +1,10 @@
 from fastapi import HTTPException, status
 
 
-HERO_SKU = "american-sugar-balance-complex"
+SUPPORTED_SKUS = {
+    "american-sugar-balance-complex",
+    "miracle-men-oil",
+}
 
 OFFERS = {
     "one": {"qty": 1, "price_mad": 199, "label": "تجربة 30 يوم"},
@@ -12,7 +15,7 @@ OFFERS = {
 
 def validate_offer(offer_id: str, qty: int, price_mad: int, sku: str) -> dict:
     offer = OFFERS.get(offer_id)
-    if not offer or sku != HERO_SKU:
+    if not offer or sku not in SUPPORTED_SKUS:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid offer")
     if offer["qty"] != qty or offer["price_mad"] != price_mad:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid offer price")
