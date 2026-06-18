@@ -44,6 +44,7 @@ const CALL_VALUE_TO_API: Record<string, string> = {
 };
 
 type TabValue = "new" | "follow_up" | "confirmed" | "blacklist" | "all";
+type ProductFilterValue = "all" | "american-sugar-balance-complex" | "miracle-men-oil";
 
 const TABS: { value: TabValue; fr: string; ar: string }[] = [
   { value: "new", fr: "Nouvelles", ar: "طلبات جديدة" },
@@ -53,6 +54,12 @@ const TABS: { value: TabValue; fr: string; ar: string }[] = [
   { value: "all", fr: "Toutes", ar: "الكل" },
 ];
 
+const PRODUCT_FILTERS: { value: ProductFilterValue; fr: string; ar: string; shortAr: string }[] = [
+  { value: "all", fr: "All products", ar: "كل المنتجات", shortAr: "الكل" },
+  { value: "american-sugar-balance-complex", fr: "Blood Sugar Complex", ar: "المركّب الأمريكي لضبط السكر", shortAr: "ضبط السكر" },
+  { value: "miracle-men-oil", fr: "Miracle Men Oil", ar: "الدهان الأمريكي المعجزة للرجال", shortAr: "دهان الرجال" },
+];
+
 export default function CallCenterPage() {
   const [lang, setLang] = useState<Lang>("ar");
   const [adminKey, setAdminKey] = useState("");
@@ -60,8 +67,10 @@ export default function CallCenterPage() {
   const [orders, setOrders] = useState<AdminOrder[]>([]);
   const [stats, setStats] = useState<AdminCallCenterStats | null>(null);
   const [counts, setCounts] = useState<{ new: number; follow_up: number; confirmed: number; blacklist: number }>({ new: 0, follow_up: 0, confirmed: 0, blacklist: 0 });
+  const [productCounts, setProductCounts] = useState<Record<ProductFilterValue, number>>({ all: 0, "american-sugar-balance-complex": 0, "miracle-men-oil": 0 });
   const [showStats, setShowStats] = useState(true);
   const [tab, setTab] = useState<TabValue>("new");
+  const [productFilter, setProductFilter] = useState<ProductFilterValue>("all");
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -72,6 +81,7 @@ export default function CallCenterPage() {
   const isArabic = lang === "ar";
   const t = (en: string, ar: string) => (isArabic ? ar : en);
   const currentKey = savedKey || adminKey;
+  const selectedProductSku = productFilter === "all" ? undefined : productFilter;
 
   useEffect(() => {
     const storedKey = window.localStorage.getItem(ADMIN_KEY_STORAGE) ?? "";
@@ -86,17 +96,18 @@ export default function CallCenterPage() {
   useEffect(() => {
     if (!savedKey) return;
     void loadOrders(savedKey);
+    void loadStats(savedKey);
+    void refreshCounts(savedKey);
+    void refreshProductCounts(savedKey);
     setSelected(new Set());
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [savedKey, tab]);
+  }, [savedKey, tab, productFilter]);
 
   useEffect(() => {
     if (!savedKey) {
       setRole(null);
       return;
     }
-    void loadStats(savedKey);
-    void refreshCounts(savedKey);
     getAdminRole(savedKey)
       .then((r) => setRole(r.role))
       .catch(() => setRole(null));
@@ -106,15 +117,34 @@ export default function CallCenterPage() {
   async function refreshCounts(key = currentKey) {
     if (!key) return;
     try {
+      const product_sku = selectedProductSku;
       const [n, f, c, b] = await Promise.all([
-        getAdminOrders(key, { limit: 1, bucket: "new" }),
-        getAdminOrders(key, { limit: 1, bucket: "follow_up" }),
-        getAdminOrders(key, { limit: 1, bucket: "confirmed" }),
-        getAdminOrders(key, { limit: 1, bucket: "blacklist" }),
+        getAdminOrders(key, { limit: 1, bucket: "new", product_sku }),
+        getAdminOrders(key, { limit: 1, bucket: "follow_up", product_sku }),
+        getAdminOrders(key, { limit: 1, bucket: "confirmed", product_sku }),
+        getAdminOrders(key, { limit: 1, bucket: "blacklist", product_sku }),
       ]);
       setCounts({ new: n.total, follow_up: f.total, confirmed: c.total, blacklist: b.total });
     } catch {
       // counts are non-blocking
+    }
+  }
+
+  async function refreshProductCounts(key = currentKey) {
+    if (!key) return;
+    try {
+      const entries = await Promise.all(
+        PRODUCT_FILTERS.map(async (item) => {
+          const params: { limit: number; bucket?: string; product_sku?: string } = { limit: 1 };
+          if (tab !== "all") params.bucket = tab;
+          if (item.value !== "all") params.product_sku = item.value;
+          const result = await getAdminOrders(key, params);
+          return [item.value, result.total] as const;
+        })
+      );
+      setProductCounts(Object.fromEntries(entries) as Record<ProductFilterValue, number>);
+    } catch {
+      // product counts are non-blocking
     }
   }
 
@@ -123,8 +153,9 @@ export default function CallCenterPage() {
     setLoading(true);
     setError(null);
     try {
-      const params: { limit: number; q: string; bucket?: string } = { limit: 300, q: query };
+      const params: { limit: number; q: string; bucket?: string; product_sku?: string } = { limit: 300, q: query };
       if (tab !== "all") params.bucket = tab;
+      if (selectedProductSku) params.product_sku = selectedProductSku;
       const result = await getAdminOrders(key, params);
       setOrders(result.orders);
     } catch (err) {
@@ -141,7 +172,7 @@ export default function CallCenterPage() {
   async function loadStats(key = currentKey) {
     if (!key) return;
     try {
-      setStats(await getCallCenterStats(key));
+      setStats(await getCallCenterStats(key, selectedProductSku));
     } catch {
       // stats are non-blocking
     }
@@ -158,6 +189,7 @@ export default function CallCenterPage() {
   function onSaved(updated: AdminOrder) {
     void loadStats();
     void refreshCounts();
+    void refreshProductCounts();
     setOrders((current) => {
       // In contact queues a handled order leaves the list once it changes state.
       if ((tab === "new" || tab === "follow_up") && updated.status !== "new") {
@@ -200,6 +232,7 @@ export default function CallCenterPage() {
       setSelected(new Set());
       void loadStats();
       void refreshCounts();
+      void refreshProductCounts();
       setPayoutVersion((v) => v + 1);
     } catch (err) {
       setError(errorMessage(err, lang));
@@ -213,7 +246,7 @@ export default function CallCenterPage() {
     if (!rows.length) return;
     const header = ["Product", "Quantity", "Customer", "Phone", "Address", "City", "Price", "Commentaire"];
     const lines = rows.map((o) => {
-      const product = o.items?.[0]?.name_ar ?? o.hero_sku;
+      const product = displayOrderProductName(o, lang);
       const city = o.delivery_city || o.city || "";
       return [product, o.hero_qty, o.customer_name, o.phone_e164, o.address || "", city, o.total_mad, o.call_note || ""]
         .map(csvCell)
@@ -334,6 +367,45 @@ export default function CallCenterPage() {
               className="rounded-full border border-gray-200 px-4 py-1.5 text-xs font-bold outline-none focus:border-[#1E4A8C]"
             />
             <span className="rounded-full bg-[#EEF5FF] px-3 py-1.5 text-xs font-black text-[#1E4A8C]">{orders.length}</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="border-b border-gray-200 bg-[#F8FAFD]">
+        <div className="mx-auto max-w-[1280px] px-4 py-3 sm:px-6">
+          <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <p className="text-xs font-black uppercase tracking-wide text-[#667085]">{t("Products", "المنتجات")}</p>
+              <p className="text-sm font-bold text-[#102033]">
+                {t("Each product has its own call center list and data.", "كل منتج عندو اللائحة والبيانات ديالو بوحدو.")}
+              </p>
+            </div>
+            <span className="rounded-full bg-white px-3 py-1.5 text-xs font-black text-[#1E4A8C]">
+              {t("Active", "المختار")}: {t(PRODUCT_FILTERS.find((item) => item.value === productFilter)?.fr ?? "All products", PRODUCT_FILTERS.find((item) => item.value === productFilter)?.shortAr ?? "الكل")}
+            </span>
+          </div>
+          <div className="grid gap-2 sm:grid-cols-3">
+            {PRODUCT_FILTERS.map((item) => (
+              <button
+                key={item.value}
+                onClick={() => setProductFilter(item.value)}
+                className={`rounded-2xl border p-3 text-start transition ${
+                  productFilter === item.value ? "border-[#1E4A8C] bg-[#1E4A8C] text-white shadow-lg" : "border-gray-200 bg-white text-[#102033] hover:border-[#1E4A8C]/40"
+                }`}
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-black">{t(item.fr, item.ar)}</p>
+                    <p className={`mt-1 text-[11px] font-bold ${productFilter === item.value ? "text-white/70" : "text-[#667085]"}`}>
+                      {item.value === "all" ? t("All call center products", "جميع منتجات مركز الاتصال") : item.value}
+                    </p>
+                  </div>
+                  <span className={`rounded-full px-2.5 py-1 text-xs font-black ${productFilter === item.value ? "bg-white/20 text-white" : "bg-[#EEF5FF] text-[#1E4A8C]"}`}>
+                    {productCounts[item.value] ?? 0}
+                  </span>
+                </div>
+              </button>
+            ))}
           </div>
         </div>
       </div>
@@ -684,7 +756,7 @@ function CallCard({
   const [saved, setSaved] = useState(false);
 
   const phoneDigits = useMemo(() => order.phone_e164.replace(/[^0-9]/g, ""), [order.phone_e164]);
-  const product = order.items?.[0]?.name_ar ?? order.hero_sku;
+  const product = displayOrderProductName(order, lang);
 
   const detailsChanged =
     name.trim() !== order.customer_name ||
@@ -903,6 +975,16 @@ function periodAr(key: string) {
     last_90_days: "90 يوم",
   };
   return map[key] ?? key;
+}
+
+function displayOrderProductName(order: AdminOrder, lang: Lang) {
+  if (order.hero_sku === "miracle-men-oil") {
+    return lang === "ar" ? "الدهان الأمريكي المعجزة للرجال" : "Miracle Men Oil";
+  }
+  if (order.hero_sku === "american-sugar-balance-complex") {
+    return lang === "ar" ? "المركّب الأمريكي لضبط السكر" : "Blood Sugar Complex";
+  }
+  return order.items?.[0]?.name_ar ?? order.hero_sku;
 }
 
 function matchCity(value?: string | null) {

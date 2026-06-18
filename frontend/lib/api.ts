@@ -461,6 +461,7 @@ export async function getAdminOrders(
     bucket?: string;
     sheet_sync_status?: string;
     q?: string;
+    product_sku?: string;
   } = {}
 ): Promise<AdminOrdersResponse> {
   const search = new URLSearchParams();
@@ -496,8 +497,10 @@ export async function editAdminOrder(adminKey: string, orderId: string, payload:
   });
 }
 
-export async function getCallCenterStats(adminKey: string): Promise<AdminCallCenterStats> {
-  return api<AdminCallCenterStats>(`/v1/admin/call-center/stats`, {
+export async function getCallCenterStats(adminKey: string, productSku?: string): Promise<AdminCallCenterStats> {
+  const search = new URLSearchParams();
+  if (productSku) search.set("product_sku", productSku);
+  return api<AdminCallCenterStats>(`/v1/admin/call-center/stats${search.toString() ? `?${search.toString()}` : ""}`, {
     headers: { "X-Admin-Key": adminKey },
   });
 }

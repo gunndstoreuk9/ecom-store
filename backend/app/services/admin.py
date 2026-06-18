@@ -56,6 +56,7 @@ def list_admin_orders(
     q: Optional[str] = None,
     date_from: Optional[date] = None,
     date_to: Optional[date] = None,
+    product_sku: Optional[str] = None,
 ) -> AdminOrdersResponse:
     query = _orders_query(db)
     query = _apply_order_filters(
@@ -67,6 +68,7 @@ def list_admin_orders(
         q=q,
         date_from=date_from,
         date_to=date_to,
+        product_sku=product_sku,
     )
     total = query.count()
     orders = query.order_by(Order.created_at.desc()).offset(offset).limit(limit).all()
@@ -269,7 +271,7 @@ def dispatch_orders(
     return AdminDispatchResponse(updated=len(orders), orders=[to_admin_order(o) for o in orders])
 
 
-def get_call_center_stats(db: Session) -> AdminCallCenterStats:
+def get_call_center_stats(db: Session, *, product_sku: Optional[str] = None) -> AdminCallCenterStats:
     now = datetime.now(timezone.utc)
     today_start = datetime.combine(now.date(), time.min, tzinfo=timezone.utc)
     yesterday_start = today_start - timedelta(days=1)
@@ -289,17 +291,15 @@ def get_call_center_stats(db: Session) -> AdminCallCenterStats:
     ]
     by_period = []
     for key, label, start_at, end_at in periods:
-        total = _count_between(db, start_at, end_at)
-        confirmed = _count_between(db, start_at, end_at, CONFIRMED_STATUSES)
+        total = _count_between(db, start_at, end_at, product_sku=product_sku)
+        confirmed = _count_between(db, start_at, end_at, CONFIRMED_STATUSES, product_sku=product_sku)
         by_period.append(AdminRatePeriod(key=key, label=label, total=total, confirmed=confirmed, rate=_percent(confirmed, total)))
 
     confirmed_expr = func.coalesce(func.sum(case((Order.status.in_(CONFIRMED_STATUSES), 1), else_=0)), 0)
-    rows = (
-        db.query(Order.hero_qty, func.count(Order.id), confirmed_expr)
-        .group_by(Order.hero_qty)
-        .order_by(Order.hero_qty.asc())
-        .all()
-    )
+    offer_query = db.query(Order.hero_qty, func.count(Order.id), confirmed_expr)
+    if product_sku:
+        offer_query = offer_query.filter(Order.hero_sku == product_sku)
+    rows = offer_query.group_by(Order.hero_qty).order_by(Order.hero_qty.asc()).all()
     by_offer = []
     for qty, total, confirmed in rows:
         total_i = int(total or 0)
@@ -317,10 +317,12 @@ def get_call_center_stats(db: Session) -> AdminCallCenterStats:
     return AdminCallCenterStats(by_period=by_period, by_offer=by_offer)
 
 
-def _count_between(db: Session, start_at: datetime, end_at: datetime, statuses: Optional[set[str]] = None) -> int:
+def _count_between(db: Session, start_at: datetime, end_at: datetime, statuses: Optional[set[str]] = None, product_sku: Optional[str] = None) -> int:
     query = db.query(func.count(Order.id)).filter(Order.created_at >= start_at, Order.created_at <= end_at)
     if statuses:
         query = query.filter(Order.status.in_(statuses))
+    if product_sku:
+        query = query.filter(Order.hero_sku == product_sku)
     return int(query.scalar() or 0)
 
 
@@ -379,6 +381,7 @@ def _apply_order_filters(
     q: Optional[str],
     date_from: Optional[date],
     date_to: Optional[date],
+    product_sku: Optional[str],
 ):
     if bucket == "new":
         query = query.filter(Order.call_status.is_(None), Order.status.notin_(NON_CONTACT_STATUSES))
@@ -402,6 +405,8 @@ def _apply_order_filters(
             query = query.filter(Order.call_status == call_status)
     if sheet_sync_status:
         query = query.filter(Order.sheet_sync_status == sheet_sync_status)
+    if product_sku:
+        query = query.filter(Order.hero_sku == product_sku)
     if q:
         like = f"%{q.strip()}%"
         query = query.filter(

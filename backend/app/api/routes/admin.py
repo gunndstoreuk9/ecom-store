@@ -145,6 +145,7 @@ def admin_orders(
     q: Optional[str] = Query(default=None, max_length=160),
     date_from: Optional[date] = Query(default=None),
     date_to: Optional[date] = Query(default=None),
+    product_sku: Optional[str] = Query(default=None, max_length=120),
     db: Session = Depends(get_db),
 ) -> AdminOrdersResponse:
     return list_admin_orders(
@@ -158,6 +159,7 @@ def admin_orders(
         q=q,
         date_from=date_from,
         date_to=date_to,
+        product_sku=product_sku,
     )
 
 
@@ -222,8 +224,11 @@ async def admin_update_order_details(
 
 
 @router.get("/call-center/stats", response_model=AdminCallCenterStats, dependencies=[Depends(require_call_center_key)])
-def admin_call_center_stats(db: Session = Depends(get_db)) -> AdminCallCenterStats:
-    return get_call_center_stats(db)
+def admin_call_center_stats(
+    product_sku: Optional[str] = Query(default=None, max_length=120),
+    db: Session = Depends(get_db),
+) -> AdminCallCenterStats:
+    return get_call_center_stats(db, product_sku=product_sku)
 
 
 @router.post("/dispatch", response_model=AdminDispatchResponse, dependencies=[Depends(require_call_center_key)])
