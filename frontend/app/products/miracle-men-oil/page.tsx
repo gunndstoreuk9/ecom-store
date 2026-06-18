@@ -106,13 +106,6 @@ export default function MiracleMenOilPage() {
             <p className="max-w-2xl text-lg font-bold leading-9 text-white/80">
               {PRODUCT.name} هو زيت عناية رجالية خارجي للرجال اللي باغين يحسو بقوة الحضور، يهربو من التوتر، ويرجعو اللحظة الخاصة بثقة أكبر وخصوصية كاملة.
             </p>
-            <div className="grid gap-3 sm:grid-cols-3">
-              {["دفع عند الاستلام", "تغليف خاص", "توصيل للمغرب"].map((item) => (
-                <div key={item} className="rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-center text-sm font-black">
-                  {item}
-                </div>
-              ))}
-            </div>
             <button onClick={scrollToOrderForm} className="rounded-full bg-red-600 px-8 py-4 text-lg font-black text-white shadow-2xl shadow-red-950/40 transition hover:bg-red-700">
               اطلب الآن بسرية — الدفع عند الاستلام
             </button>
@@ -281,64 +274,106 @@ function DirectCodOrderForm() {
   }
 
   return (
-    <section id="cod-order" dir="rtl" className="bg-white py-12">
-      <div className="container-main max-w-3xl">
-        <div className="relative overflow-hidden rounded-[34px] border-2 border-red-200 bg-gradient-to-br from-white via-red-50 to-amber-50 p-5 shadow-2xl md:p-8">
-          <div className="mb-6 text-center">
-            <div className="mx-auto mb-3 inline-flex rounded-full bg-red-600 px-4 py-2 text-sm font-black text-white">
-              عرض خاص بالدفع عند الاستلام
-            </div>
-            <h2 className="text-3xl font-black text-[#102033] md:text-4xl">اختار العرض ودخل معلوماتك بسرية</h2>
-            <p className="mt-3 text-sm font-bold leading-7 text-[#667085]">لا بطاقة، لا تحويل، لا إحراج. تأكيد بالهاتف ثم الدفع عند الاستلام.</p>
+    <section id="cod-order" dir="rtl" className="bg-gradient-to-b from-white via-[#FFF7ED] to-white py-12">
+      <div className="container-main max-w-6xl">
+        <div className="mb-6 text-center">
+          <div className="mx-auto mb-3 inline-flex rounded-full bg-red-600 px-5 py-2 text-sm font-black text-white shadow-lg">
+            تسجيل الطلب بسرية كاملة
           </div>
+          <h2 className="text-3xl font-black leading-tight text-[#102033] md:text-5xl">اختار العرض وخلي الفريق يتاصل بك للتأكيد</h2>
+          <p className="mx-auto mt-3 max-w-2xl text-sm font-bold leading-7 text-[#667085]">
+            ما كاين لا دفع مسبق لا إحراج. كتدخل معلوماتك، كنأكدو معاك فالهاتف، وكتخلص غير عند الاستلام.
+          </p>
+        </div>
 
-          <div className="mb-5 grid gap-3">
-            {HERO_OFFERS.map((offer) => (
-              <button
-                key={offer.id}
-                type="button"
-                onClick={() => setSelectedOfferId(offer.id)}
-                className={`rounded-2xl border-2 p-4 text-right transition ${
-                  selectedOfferId === offer.id ? "border-red-600 bg-red-50 shadow-md" : "border-gray-200 bg-white hover:border-red-300"
-                }`}
-              >
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <p className="text-lg font-black text-[#102033]">{offer.sublabel}</p>
-                    <p className="text-xs font-bold text-[#667085]">{offer.badge || offer.label}</p>
-                  </div>
-                  <p className="text-2xl font-black text-red-600">{formatMad(offer.priceMad)}</p>
-                </div>
-              </button>
-            ))}
-          </div>
-
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
-            <Field icon={User} placeholder="الاسم الكامل" error={errors.name?.message} props={register("name")} />
-            <Field icon={Phone} placeholder="رقم الهاتف المغربي" error={errors.phone?.message} props={register("phone")} type="tel" />
-            <Field icon={MapPin} placeholder="المدينة" error={errors.city?.message} props={register("city")} />
-
-            <div className="rounded-2xl bg-[#160B08] p-4 text-white">
-              <div className="flex justify-between text-sm font-bold text-white/70"><span>العرض المختار</span><span>{selectedOffer.sublabel}</span></div>
-              <div className="mt-2 flex justify-between border-t border-white/10 pt-3 text-xl font-black"><span>المبلغ عند الاستلام</span><span className="text-amber-300">{formatMad(selectedOffer.priceMad)}</span></div>
-            </div>
-
-            <button disabled={submitting} className="min-h-[64px] w-full rounded-2xl bg-red-600 px-5 py-4 text-xl font-black text-white shadow-lg shadow-red-900/25 transition hover:bg-red-700 disabled:opacity-60">
-              {submitting ? "جاري تسجيل الطلب..." : "أكد طلبي الآن — الدفع عند الاستلام"}
-            </button>
-
-            {submitError ? (
-              <p className="rounded-3xl border-2 border-red-200 bg-red-50 px-5 py-4 text-center text-xl font-extrabold leading-8 text-[#B91C1C] shadow-sm">
-                {submitError}
+        <div className="grid gap-5 lg:grid-cols-[0.9fr_1.1fr]">
+          <div className="relative overflow-hidden rounded-[34px] bg-[#160B08] p-5 text-white shadow-2xl md:p-6">
+            <div className="absolute -left-16 -top-16 h-40 w-40 rounded-full bg-red-600/30 blur-3xl" />
+            <div className="absolute -bottom-16 right-10 h-44 w-44 rounded-full bg-amber-400/20 blur-3xl" />
+            <div className="relative">
+              <Image src={PRODUCT.lion} alt={PRODUCT.name} width={900} height={900} className="mb-4 rounded-[26px] object-cover shadow-xl" />
+              <h3 className="text-2xl font-black leading-tight">قرار صغير دابا... يقدر يبدل إحساسك بالثقة</h3>
+              <p className="mt-3 text-sm font-bold leading-7 text-white/75">
+                الطلب خاص، التوصيل محترم، والمكالمة فقط لتأكيد المعلومات قبل الإرسال.
               </p>
-            ) : null}
-
-            <div className="grid gap-2 text-xs font-black text-[#667085] sm:grid-cols-3">
-              <span className="flex items-center justify-center gap-1 rounded-full bg-white px-3 py-2"><ShieldCheck className="h-4 w-4 text-green-600" /> بياناتك محمية</span>
-              <span className="flex items-center justify-center gap-1 rounded-full bg-white px-3 py-2"><Truck className="h-4 w-4 text-red-600" /> توصيل سريع</span>
-              <span className="flex items-center justify-center gap-1 rounded-full bg-white px-3 py-2"><CheckCircle2 className="h-4 w-4 text-green-600" /> لا دفع مسبق</span>
+              <div className="mt-5 grid gap-2">
+                {[
+                  ["1", "اختار العرض المناسب"],
+                  ["2", "دخل الاسم والهاتف والمدينة"],
+                  ["3", "كنعيطو لك ونأكدو الطلب بسرية"],
+                  ["4", "كتخلص غير ملي تستلم"],
+                ].map(([step, text]) => (
+                  <div key={step} className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/10 p-3">
+                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-amber-400 text-sm font-black text-[#160B08]">{step}</span>
+                    <span className="text-sm font-black">{text}</span>
+                  </div>
+                ))}
+              </div>
             </div>
-          </form>
+          </div>
+
+          <div className="rounded-[34px] border-2 border-red-100 bg-white p-4 shadow-2xl md:p-6">
+            <div className="mb-4 rounded-3xl bg-red-50 p-4 text-center">
+              <p className="text-sm font-black text-red-700">العرض الحالي محدود حسب المخزون</p>
+              <p className="mt-1 text-xs font-bold text-[#667085]">اختيار العرض الكبير كينقص عليك الثمن وكيعطيك مدة استعمال أطول</p>
+            </div>
+
+            <div className="mb-5 grid gap-3">
+              {HERO_OFFERS.map((offer) => (
+                <button
+                  key={offer.id}
+                  type="button"
+                  onClick={() => setSelectedOfferId(offer.id)}
+                  className={`relative overflow-hidden rounded-3xl border-2 p-4 text-right transition ${
+                    selectedOfferId === offer.id ? "border-red-600 bg-red-50 shadow-lg shadow-red-900/10" : "border-gray-200 bg-white hover:border-red-300"
+                  }`}
+                >
+                  {offer.default ? (
+                    <span className="absolute left-4 top-3 rounded-full bg-[#160B08] px-3 py-1 text-[10px] font-black text-amber-300">
+                      الأكثر اختياراً
+                    </span>
+                  ) : null}
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-xl font-black text-[#102033]">{offer.sublabel}</p>
+                      <p className="mt-1 text-xs font-bold text-[#667085]">{offer.savings || offer.label}</p>
+                    </div>
+                    <div className="text-left">
+                      <p className="text-2xl font-black text-red-600">{formatMad(offer.priceMad)}</p>
+                      <p className="text-[11px] font-bold text-[#667085]">الدفع عند الاستلام</p>
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
+              <Field icon={User} placeholder="الاسم الكامل" error={errors.name?.message} props={register("name")} />
+              <Field icon={Phone} placeholder="رقم الهاتف المغربي" error={errors.phone?.message} props={register("phone")} type="tel" />
+              <Field icon={MapPin} placeholder="المدينة" error={errors.city?.message} props={register("city")} />
+
+              <div className="rounded-3xl bg-[#160B08] p-4 text-white">
+                <div className="flex justify-between text-sm font-bold text-white/70"><span>العرض المختار</span><span>{selectedOffer.sublabel}</span></div>
+                <div className="mt-2 flex justify-between border-t border-white/10 pt-3 text-xl font-black"><span>المبلغ عند الاستلام</span><span className="text-amber-300">{formatMad(selectedOffer.priceMad)}</span></div>
+              </div>
+
+              <button disabled={submitting} className="min-h-[66px] w-full rounded-3xl bg-red-600 px-5 py-4 text-xl font-black text-white shadow-xl shadow-red-900/25 transition hover:bg-red-700 disabled:opacity-60">
+                {submitting ? "جاري تسجيل الطلب..." : "أكد طلبي الآن — الدفع عند الاستلام"}
+              </button>
+
+              {submitError ? (
+                <p className="rounded-3xl border-2 border-red-200 bg-red-50 px-5 py-4 text-center text-xl font-extrabold leading-8 text-[#B91C1C] shadow-sm">
+                  {submitError}
+                </p>
+              ) : null}
+
+              <div className="grid gap-2 text-xs font-black text-[#667085] sm:grid-cols-3">
+                <span className="flex items-center justify-center gap-1 rounded-full bg-[#F8FAFC] px-3 py-2"><ShieldCheck className="h-4 w-4 text-green-600" /> بياناتك محمية</span>
+                <span className="flex items-center justify-center gap-1 rounded-full bg-[#F8FAFC] px-3 py-2"><Truck className="h-4 w-4 text-red-600" /> توصيل سريع</span>
+                <span className="flex items-center justify-center gap-1 rounded-full bg-[#F8FAFC] px-3 py-2"><CheckCircle2 className="h-4 w-4 text-green-600" /> لا دفع مسبق</span>
+              </div>
+            </form>
+          </div>
         </div>
       </div>
     </section>
