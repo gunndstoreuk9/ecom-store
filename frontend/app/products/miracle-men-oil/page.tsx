@@ -97,6 +97,9 @@ export default function MiracleMenOilPage() {
               <Sparkles className="h-4 w-4" />
               للرجال اللي بغاو يرجعو الحضور والثقة
             </div>
+            <div className="relative overflow-hidden rounded-[28px] border border-amber-300/30 bg-black/30 p-1.5 shadow-2xl lg:hidden">
+              <Image src={PRODUCT.hero} alt={PRODUCT.name} width={900} height={900} className="aspect-square w-full rounded-[22px] object-cover" priority />
+            </div>
             <h1 className="text-4xl font-black leading-tight md:text-6xl">
               راك ماشي محتاج تبقى ساكت... <span className="text-amber-300">الثقة كتبدأ من هنا</span>
             </h1>
@@ -114,7 +117,7 @@ export default function MiracleMenOilPage() {
               اطلب الآن بسرية — الدفع عند الاستلام
             </button>
           </div>
-          <div className="relative">
+          <div className="relative hidden lg:block">
             <div className="absolute -inset-5 rounded-[40px] bg-gradient-to-br from-red-600/35 to-amber-400/25 blur-2xl" />
             <div className="relative overflow-hidden rounded-[36px] border border-amber-300/30 bg-black/30 p-2 shadow-2xl">
               <Image src={PRODUCT.hero} alt={PRODUCT.name} width={900} height={900} className="h-auto w-full rounded-[28px] object-cover" priority />
