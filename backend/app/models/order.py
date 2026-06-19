@@ -7,6 +7,7 @@ from typing import Optional
 from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, func
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+import uuid as _uuid_module
 
 from app.core.database import Base
 
@@ -53,11 +54,15 @@ class Order(Base):
     sheet_sync_status: Mapped[str] = mapped_column(String(32), default="pending")
     sheet_last_error: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     sheet_synced_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    assigned_agent_id: Mapped[Optional[_uuid_module.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("agents.id", ondelete="SET NULL"), nullable=True, index=True)
+    assigned_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    first_response_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
     items: Mapped[list["OrderItem"]] = relationship(back_populates="order", cascade="all, delete-orphan")
     conversion_events: Mapped[list["ConversionEvent"]] = relationship(back_populates="order", cascade="all, delete-orphan")
+    assigned_agent: Mapped[Optional["Agent"]] = relationship("Agent", back_populates="assigned_orders", foreign_keys=[assigned_agent_id])  # type: ignore[name-defined]
 
 
 class OrderItem(Base):

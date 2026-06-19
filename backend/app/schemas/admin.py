@@ -81,6 +81,9 @@ class AdminOrderListItem(BaseModel):
     currency: str
     sheet_sync_status: str
     sheet_last_error: Optional[str] = None
+    assigned_agent_id: Optional[str] = None
+    assigned_agent_name: Optional[str] = None
+    assigned_at: Optional[datetime] = None
     created_at: datetime
     updated_at: datetime
     utm: Optional[dict] = None

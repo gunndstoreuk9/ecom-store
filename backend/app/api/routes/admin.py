@@ -175,7 +175,7 @@ async def admin_update_order_status(
     db: Session = Depends(get_db),
 ) -> AdminOrderListItem:
     payload = await _parse_body(request, AdminOrderStatusUpdate)
-    order = update_admin_order_status(db, order_id, payload.status)
+    order = update_admin_order_status(db, order_id, payload)
     if not order:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
     return order
@@ -188,14 +188,7 @@ async def admin_update_order_call(
     db: Session = Depends(get_db),
 ) -> AdminOrderListItem:
     payload = await _parse_body(request, AdminOrderCallUpdate)
-    order = update_admin_order_call(
-        db,
-        order_id,
-        call_status=payload.call_status,
-        call_note=payload.call_note,
-        delivery_company=payload.delivery_company,
-        delivery_city=payload.delivery_city,
-    )
+    order = update_admin_order_call(db, order_id, payload)
     if not order:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
     return order

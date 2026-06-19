@@ -1,11 +1,50 @@
 from __future__ import annotations
 
+import hashlib
+import secrets
+import time
 from hmac import compare_digest
 from typing import Optional
 
 from fastapi import Header, HTTPException, status
 
 from app.core.config import get_settings
+
+# ---------------------------------------------------------------------------
+# Agent session tokens (in-memory, simple, no JWT library needed)
+# Format:  <agent_id>.<random_hex>
+# ---------------------------------------------------------------------------
+_agent_sessions: dict[str, dict] = {}   # token -> {"agent_id": str, "exp": float}
+_SESSION_TTL = 8 * 3600  # 8 hours
+
+
+def create_agent_session(agent_id: str) -> str:
+    token = f"{agent_id}.{secrets.token_hex(32)}"
+    _agent_sessions[token] = {"agent_id": agent_id, "exp": time.time() + _SESSION_TTL}
+    _cleanup_sessions()
+    return token
+
+
+def verify_agent_session(token: str) -> Optional[str]:
+    """Return agent_id if token valid, else None."""
+    entry = _agent_sessions.get(token)
+    if not entry:
+        return None
+    if time.time() > entry["exp"]:
+        _agent_sessions.pop(token, None)
+        return None
+    return entry["agent_id"]
+
+
+def invalidate_agent_session(token: str) -> None:
+    _agent_sessions.pop(token, None)
+
+
+def _cleanup_sessions() -> None:
+    now = time.time()
+    expired = [t for t, e in _agent_sessions.items() if now > e["exp"]]
+    for t in expired:
+        _agent_sessions.pop(t, None)
 
 
 def resolve_role(

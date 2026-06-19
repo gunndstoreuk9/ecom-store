@@ -118,6 +118,9 @@ export interface AdminOrder {
   currency: string;
   sheet_sync_status: string;
   sheet_last_error?: string | null;
+  assigned_agent_id?: string | null;
+  assigned_agent_name?: string | null;
+  assigned_at?: string | null;
   created_at: string;
   updated_at: string;
   utm?: Record<string, string> | null;
@@ -791,5 +794,148 @@ export async function resetConfirmationPayout(adminKey: string, pin: string): Pr
     method: "POST",
     headers: { "X-Admin-Key": adminKey },
     body: JSON.stringify({ pin }),
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Agents (admin management)
+// ---------------------------------------------------------------------------
+
+export interface AgentResponse {
+  id: string;
+  username: string;
+  display_name: string;
+  status: "active" | "inactive";
+  allowed_skus: string[] | null;
+  created_at: string;
+}
+
+export interface AgentStats {
+  agent_id: string;
+  display_name: string;
+  username: string;
+  status: string;
+  allowed_skus: string[] | null;
+  days: number;
+  total_assigned: number;
+  confirmed: number;
+  cancelled: number;
+  pending_open: number;
+  confirmation_rate: number;
+  avg_response_minutes: number | null;
+}
+
+export interface AgentCreatePayload {
+  username: string;
+  password: string;
+  display_name: string;
+  allowed_skus?: string[] | null;
+}
+
+export interface AgentUpdatePayload {
+  display_name?: string;
+  password?: string;
+  status?: "active" | "inactive";
+  allowed_skus?: string[] | null;
+  clear_skus?: boolean;
+}
+
+export interface AgentSession {
+  token: string;
+  agent_id: string;
+  display_name: string;
+  allowed_skus: string[] | null;
+}
+
+export async function adminListAgents(adminKey: string): Promise<AgentResponse[]> {
+  return api<AgentResponse[]>(`/v1/agents`, { headers: { "X-Admin-Key": adminKey } });
+}
+
+export async function adminGetAllAgentStats(adminKey: string, days = 30): Promise<AgentStats[]> {
+  return api<AgentStats[]>(`/v1/agents/stats?days=${days}`, { headers: { "X-Admin-Key": adminKey } });
+}
+
+export async function adminCreateAgent(adminKey: string, payload: AgentCreatePayload): Promise<AgentResponse> {
+  return api<AgentResponse>(`/v1/agents`, {
+    method: "POST",
+    headers: { "X-Admin-Key": adminKey },
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function adminUpdateAgent(adminKey: string, agentId: string, payload: AgentUpdatePayload): Promise<AgentResponse> {
+  return api<AgentResponse>(`/v1/agents/${agentId}`, {
+    method: "PATCH",
+    headers: { "X-Admin-Key": adminKey },
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function adminDeleteAgent(adminKey: string, agentId: string): Promise<void> {
+  await api<{ ok: boolean }>(`/v1/agents/${agentId}`, {
+    method: "DELETE",
+    headers: { "X-Admin-Key": adminKey },
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Agents (self-service: agent token auth)
+// ---------------------------------------------------------------------------
+
+export async function agentLogin(username: string, password: string): Promise<AgentSession> {
+  return api<AgentSession>(`/v1/agents/login`, {
+    method: "POST",
+    body: JSON.stringify({ username, password }),
+  });
+}
+
+export async function agentLogout(token: string): Promise<void> {
+  await api<{ ok: boolean }>(`/v1/agents/logout`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export async function getAgentMe(token: string): Promise<AgentStats> {
+  return api<AgentStats>(`/v1/agents/me`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export interface AgentOrdersQuery {
+  limit?: number;
+  offset?: number;
+  status?: string;
+  call_status?: string;
+  q?: string;
+  bucket?: string;
+}
+
+export async function getAgentOrders(token: string, query: AgentOrdersQuery = {}): Promise<{ total: number; limit: number; offset: number; orders: AdminOrder[] }> {
+  const search = new URLSearchParams();
+  if (query.limit) search.set("limit", String(query.limit));
+  if (query.offset) search.set("offset", String(query.offset));
+  if (query.status) search.set("status", query.status);
+  if (query.call_status) search.set("call_status", query.call_status);
+  if (query.q) search.set("q", query.q);
+  if (query.bucket) search.set("bucket", query.bucket);
+  return api<{ total: number; limit: number; offset: number; orders: AdminOrder[] }>(`/v1/agents/me/orders?${search.toString()}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export async function agentUpdateOrderCall(token: string, orderId: string, payload: AdminOrderCallPayload): Promise<AdminOrder> {
+  return api<AdminOrder>(`/v1/agents/me/orders/${orderId}/call`, {
+    method: "PATCH",
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function agentUpdateOrderStatus(token: string, orderId: string, status: string): Promise<AdminOrder> {
+  return api<AdminOrder>(`/v1/agents/me/orders/${orderId}/status`, {
+    method: "PATCH",
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ status }),
   });
 }

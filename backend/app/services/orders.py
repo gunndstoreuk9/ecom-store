@@ -99,6 +99,7 @@ def create_order(
     db.add(order)
     db.commit()
     db.refresh(order)
+    _try_auto_assign(db, order)
     return order
 
 
@@ -175,7 +176,17 @@ def import_sheet_lead(db: Session, raw_payload: dict) -> tuple[Order, bool]:
     db.add(order)
     db.commit()
     db.refresh(order)
+    _try_auto_assign(db, order)
     return order, True
+
+
+def _try_auto_assign(db: Session, order: Order) -> None:
+    """Best-effort auto-assign; silently swallows errors to not break order creation."""
+    try:
+        from app.services.agents import assign_order_to_agent
+        assign_order_to_agent(db, order)
+    except Exception:
+        pass
 
 
 def get_order(db: Session, order_id: str) -> Order | None:

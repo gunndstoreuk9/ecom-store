@@ -63,6 +63,7 @@ def list_admin_orders(
     date_from: Optional[date] = None,
     date_to: Optional[date] = None,
     product_sku: Optional[str] = None,
+    assigned_agent_id: Optional[str] = None,
 ) -> AdminOrdersResponse:
     query = _orders_query(db)
     query = _apply_order_filters(
@@ -75,6 +76,7 @@ def list_admin_orders(
         date_from=date_from,
         date_to=date_to,
         product_sku=product_sku,
+        assigned_agent_id=assigned_agent_id,
     )
     total = query.count()
     orders = query.order_by(Order.created_at.desc()).offset(offset).limit(limit).all()
@@ -119,28 +121,12 @@ def get_admin_analytics(db: Session, *, days: int) -> AdminAnalyticsResponse:
     )
 
 
-def update_admin_order_status(db: Session, order_id: str, new_status: str) -> Optional[AdminOrderListItem]:
-    try:
-        order_uuid = UUID(order_id)
-    except ValueError:
-        return None
-    order = db.get(Order, order_uuid)
-    if not order:
-        return None
-    order.status = new_status
-    db.commit()
-    db.refresh(order)
-    return to_admin_order(order)
-
-
-def update_admin_order_call(
+def update_admin_order_status(
     db: Session,
     order_id: str,
+    payload: "AdminOrderStatusUpdate",
     *,
-    call_status: str,
-    call_note: Optional[str] = None,
-    delivery_company: Optional[str] = None,
-    delivery_city: Optional[str] = None,
+    agent_id: Optional[str] = None,
 ) -> Optional[AdminOrderListItem]:
     try:
         order_uuid = UUID(order_id)
@@ -149,14 +135,44 @@ def update_admin_order_call(
     order = db.get(Order, order_uuid)
     if not order:
         return None
+    if agent_id and str(order.assigned_agent_id) != agent_id:
+        return None
+    order.status = payload.status
+    db.commit()
+    db.refresh(order)
+    return to_admin_order(order)
 
+
+def update_admin_order_call(
+    db: Session,
+    order_id: str,
+    payload: "AdminOrderCallUpdate",
+    *,
+    agent_id: Optional[str] = None,
+) -> Optional[AdminOrderListItem]:
+    try:
+        order_uuid = UUID(order_id)
+    except ValueError:
+        return None
+    order = db.get(Order, order_uuid)
+    if not order:
+        return None
+    if agent_id and str(order.assigned_agent_id) != agent_id:
+        return None
+
+    from datetime import datetime, timezone
+    now = datetime.now(timezone.utc)
+    if agent_id and order.first_response_at is None:
+        order.first_response_at = now
+
+    call_status = payload.call_status
     order.call_status = call_status
-    if call_note is not None:
-        order.call_note = call_note.strip() or None
-    if delivery_company is not None:
-        order.delivery_company = delivery_company.strip() or None
-    if delivery_city is not None:
-        order.delivery_city = delivery_city.strip() or None
+    if payload.call_note is not None:
+        order.call_note = payload.call_note.strip() or None
+    if payload.delivery_company is not None:
+        order.delivery_company = payload.delivery_company.strip() or None
+    if payload.delivery_city is not None:
+        order.delivery_city = payload.delivery_city.strip() or None
 
     if call_status in RETRY_CALL_STATUSES:
         order.call_attempts = (order.call_attempts or 0) + 1
@@ -364,6 +380,9 @@ def _offer_label(qty: int) -> str:
 
 
 def to_admin_order(order: Order) -> AdminOrderListItem:
+    assigned_agent_name: Optional[str] = None
+    if order.assigned_agent_id and hasattr(order, "assigned_agent") and order.assigned_agent:
+        assigned_agent_name = order.assigned_agent.display_name
     return AdminOrderListItem(
         id=order.id,
         public_order_number=order.public_order_number,
@@ -393,6 +412,9 @@ def to_admin_order(order: Order) -> AdminOrderListItem:
         currency=order.currency,
         sheet_sync_status=order.sheet_sync_status,
         sheet_last_error=order.sheet_last_error,
+        assigned_agent_id=str(order.assigned_agent_id) if order.assigned_agent_id else None,
+        assigned_agent_name=assigned_agent_name,
+        assigned_at=order.assigned_at,
         created_at=order.created_at,
         updated_at=order.updated_at,
         utm=order.utm,
@@ -401,7 +423,8 @@ def to_admin_order(order: Order) -> AdminOrderListItem:
 
 
 def _orders_query(db: Session):
-    return db.query(Order).options(selectinload(Order.items))
+    from app.models.agent import Agent as _Agent  # avoid circular at module level
+    return db.query(Order).options(selectinload(Order.items), selectinload(Order.assigned_agent))
 
 
 def _apply_order_filters(
@@ -415,6 +438,7 @@ def _apply_order_filters(
     date_from: Optional[date],
     date_to: Optional[date],
     product_sku: Optional[str],
+    assigned_agent_id: Optional[str] = None,
 ):
     if bucket == "new":
         query = query.filter(Order.call_status.is_(None), Order.status.notin_(NON_CONTACT_STATUSES))
@@ -455,6 +479,12 @@ def _apply_order_filters(
         query = query.filter(Order.created_at >= datetime.combine(date_from, time.min, tzinfo=timezone.utc))
     if date_to:
         query = query.filter(Order.created_at <= datetime.combine(date_to, time.max, tzinfo=timezone.utc))
+    if assigned_agent_id:
+        try:
+            from uuid import UUID as _UUID
+            query = query.filter(Order.assigned_agent_id == _UUID(assigned_agent_id))
+        except ValueError:
+            pass
     return query
 
 
