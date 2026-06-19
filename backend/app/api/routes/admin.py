@@ -2,12 +2,14 @@ from __future__ import annotations
 
 import json
 from datetime import date
+from hmac import compare_digest
 from typing import Optional, Type, TypeVar
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from pydantic import BaseModel, ValidationError
 from sqlalchemy.orm import Session
 
+from app.core.config import get_settings
 from app.core.database import get_db
 from app.core.security import require_admin_key, require_call_center_key, resolve_role
 from app.schemas.admin import (
@@ -20,6 +22,8 @@ from app.schemas.admin import (
     AdminOrderListItem,
     AdminOrdersResponse,
     AdminOrderStatusUpdate,
+    CleanupSheetImportsRequest,
+    CleanupSheetImportsResponse,
     ConfirmationPayoutResponse,
     ConfirmationPayoutReset,
     ConfirmationPayoutUpdate,
@@ -29,6 +33,7 @@ from app.schemas.admin import (
 )
 from app.schemas.store_analytics import StoreAnalyticsResponse
 from app.services.admin import (
+    cleanup_bad_sheet_imports,
     dispatch_orders,
     get_admin_analytics,
     get_call_center_stats,
@@ -229,6 +234,21 @@ def admin_call_center_stats(
     db: Session = Depends(get_db),
 ) -> AdminCallCenterStats:
     return get_call_center_stats(db, product_sku=product_sku)
+
+
+@router.post("/orders/cleanup-bad-sheet-imports", response_model=CleanupSheetImportsResponse, dependencies=[Depends(require_admin_key)])
+async def admin_cleanup_bad_sheet_imports(
+    request: Request,
+    db: Session = Depends(get_db),
+) -> CleanupSheetImportsResponse:
+    payload = await _parse_body(request, CleanupSheetImportsRequest)
+    expected = get_settings().admin_reset_pin.strip()
+    if not expected:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin PIN is not configured")
+    if not payload.pin or not compare_digest(payload.pin.strip(), expected):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid admin PIN")
+    matched, deleted = cleanup_bad_sheet_imports(db, dry_run=payload.dry_run)
+    return CleanupSheetImportsResponse(matched=matched, deleted=deleted, dry_run=payload.dry_run)
 
 
 @router.post("/dispatch", response_model=AdminDispatchResponse, dependencies=[Depends(require_call_center_key)])

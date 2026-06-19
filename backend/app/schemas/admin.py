@@ -266,6 +266,17 @@ class ConfirmationPayoutReset(BaseModel):
     pin: str = Field(min_length=1, max_length=64)
 
 
+class CleanupSheetImportsRequest(BaseModel):
+    pin: str = Field(min_length=1, max_length=64)
+    dry_run: bool = False
+
+
+class CleanupSheetImportsResponse(BaseModel):
+    matched: int
+    deleted: int
+    dry_run: bool
+
+
 class FraudSettingsResponse(BaseModel):
     enabled: bool
     lock_period_minutes: int

@@ -42,6 +42,12 @@ CONTACTABLE_STATUSES = {"new", "no_answer", "awaiting_confirmation"}
 # Orders in these states are already handled and should not appear in contact queues.
 NON_CONTACT_STATUSES = {"cancelled", "refused", "delivered", "returned", "shipped", "packed", "confirmed"}
 BLACKLIST_ERROR_PATTERNS = ("%liste noire%", "%blacklist%")
+SUPPORTED_SHEET_IMPORT_SKUS = {
+    "TOPLUX-BSC-940-60",
+    "MIRACLE-MEN-OIL-30ML",
+    "american-sugar-balance-complex",
+    "miracle-men-oil",
+}
 
 
 def list_admin_orders(
@@ -269,6 +275,31 @@ def dispatch_orders(
     for order in orders:
         db.refresh(order)
     return AdminDispatchResponse(updated=len(orders), orders=[to_admin_order(o) for o in orders])
+
+
+def cleanup_bad_sheet_imports(db: Session, *, dry_run: bool = False) -> tuple[int, int]:
+    """Remove only bad Google Sheet imports that are still waiting in the new queue.
+
+    Bad imports are rows that came from the Shopify/Google Sheet bridge but did not
+    contain one of the supported SKUs. They were imported only because an older script
+    inferred product SKU from product name.
+    """
+    query = (
+        db.query(Order)
+        .filter(Order.sheet_sync_status == "imported")
+        .filter(Order.status == "new")
+        .filter(Order.call_status.is_(None))
+        .filter(Order.utm["imported_from"].astext == "google_sheet")
+        .filter(~Order.utm["sheet_sku"].astext.in_(SUPPORTED_SHEET_IMPORT_SKUS))
+    )
+    orders = query.all()
+    matched = len(orders)
+    if dry_run:
+        return matched, 0
+    for order in orders:
+        db.delete(order)
+    db.commit()
+    return matched, matched
 
 
 def get_call_center_stats(db: Session, *, product_sku: Optional[str] = None) -> AdminCallCenterStats:
