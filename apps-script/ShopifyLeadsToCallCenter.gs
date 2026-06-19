@@ -19,6 +19,11 @@ const HEADER_ALIASES = {
 
 const REQUIRED_HEADERS = ['SKU', 'FULL NAME', 'PHONE NUMBER'];
 
+const PRODUCT_NAME_RULES = [
+  { sku: 'MIRACLE-MEN-OIL-30ML', words: ['MIRACLE', 'MEN OIL', 'MEN-OIL', 'XXL', 'PROSPER MAN'] },
+  { sku: 'TOPLUX-BSC-940-60', words: ['BLOOD SUGAR', 'SUGAR', 'COMPLIX', 'COMPLEX', 'سكر'] }
+];
+
 function sendNewLeadsToCallCenter() {
   const lock = LockService.getScriptLock();
   if (!lock.tryLock(3000)) return;
@@ -45,6 +50,11 @@ function sendNewLeadsToCallCenter() {
 
       try {
         const payload = buildPayload_(finalHeaders, row, rowNumber, sheet);
+        if (!isMoroccoPhone_(payload.row['PHONE NUMBER'])) {
+          sheet.getRange(rowNumber, statusCol).setValue('SKIPPED_NON_MA');
+          sheet.getRange(rowNumber, errorCol).setValue('Skipped: phone is not a Moroccan number');
+          return;
+        }
         const result = postLead_(payload);
         sheet.getRange(rowNumber, statusCol).setValue('IMPORTED');
         sheet.getRange(rowNumber, orderIdCol).setValue(result.public_order_number || result.order_id || '');
@@ -146,11 +156,67 @@ function buildPayload_(headers, row, rowNumber, sheet) {
   addCanonicalField_(rowObject, headers, row, 'ADDRESS');
   addCanonicalField_(rowObject, headers, row, 'QUANTITY');
   addCanonicalField_(rowObject, headers, row, 'TOTAL PRICE MAD');
+  applyKnownSheetLayoutFixes_(rowObject, row);
 
   rowObject.ROW_NUMBER = rowNumber;
   rowObject.SOURCE = 'shopify_sheet';
   rowObject.SOURCE_ID = sheet.getParent().getId() + ':' + sheet.getSheetId() + ':' + rowNumber;
   return { row: rowObject };
+}
+
+function applyKnownSheetLayoutFixes_(rowObject, row) {
+  const colA = String(row[0] || '').trim();
+  const colB = String(row[1] || '').trim();
+  const colC = String(row[2] || '').trim();
+  const colE = String(row[4] || '').trim();
+  const colF = String(row[5] || '').trim();
+  const colG = String(row[6] || '').trim();
+
+  // RADC Shopify export has wrong headers: A=name, B=phone, C=city, E=qty, F=price, G=product.
+  if (looksLikePhone_(colB) && !looksLikeKnownSku_(colA)) {
+    rowObject['FULL NAME'] = colA;
+    rowObject['PHONE NUMBER'] = colB;
+    rowObject.CITY = colC;
+    rowObject.QUANTITY = colE || rowObject.QUANTITY || '1';
+    rowObject['TOTAL PRICE MAD'] = colF || rowObject['TOTAL PRICE MAD'] || '';
+    rowObject['PRODUCT NAME'] = colG;
+
+    const inferredSku = inferSkuFromProduct_(colG);
+    if (inferredSku) rowObject.SKU = inferredSku;
+  }
+
+  if (!looksLikeKnownSku_(rowObject.SKU)) {
+    const inferredSku = inferSkuFromProduct_(rowObject['PRODUCT NAME'] || colG || rowObject.SKU);
+    if (inferredSku) rowObject.SKU = inferredSku;
+  }
+}
+
+function inferSkuFromProduct_(productName) {
+  const text = String(productName || '').trim().toUpperCase();
+  if (!text) return '';
+
+  for (var i = 0; i < PRODUCT_NAME_RULES.length; i++) {
+    const rule = PRODUCT_NAME_RULES[i];
+    for (var j = 0; j < rule.words.length; j++) {
+      if (text.indexOf(rule.words[j].toUpperCase()) !== -1) return rule.sku;
+    }
+  }
+
+  return '';
+}
+
+function looksLikeKnownSku_(value) {
+  const text = String(value || '').trim().toUpperCase();
+  return text === 'MIRACLE-MEN-OIL-30ML' || text === 'TOPLUX-BSC-940-60';
+}
+
+function looksLikePhone_(value) {
+  return /\+?\d[\d\s().-]{7,}/.test(String(value || ''));
+}
+
+function isMoroccoPhone_(value) {
+  const digits = String(value || '').replace(/[^\d]/g, '');
+  return /^0[67]\d{8}$/.test(digits) || /^2120?[67]\d{8}$/.test(digits) || /^002120?[67]\d{8}$/.test(digits);
 }
 
 function addCanonicalField_(rowObject, headers, row, canonicalHeader) {

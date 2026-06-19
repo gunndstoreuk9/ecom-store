@@ -292,9 +292,9 @@ def _product_sku_from_sheet(sheet_sku: str, product_name: str | None = None) -> 
             return product_sku
 
     haystack = f"{normalized_sku} {product_name or ''}".lower()
-    if "miracle" in haystack or "men-oil" in haystack or "men oil" in haystack or "xxl" in haystack:
+    if "miracle" in haystack or "men-oil" in haystack or "men oil" in haystack or "xxl" in haystack or "prosper man" in haystack:
         return "miracle-men-oil"
-    if "sugar" in haystack or "balance" in haystack or "bsc" in haystack or "سكر" in haystack:
+    if "sugar" in haystack or "balance" in haystack or "bsc" in haystack or "complix" in haystack or "complex" in haystack or "سكر" in haystack:
         return "american-sugar-balance-complex"
 
     raise ValueError(f"Unknown product SKU: {sheet_sku}")

@@ -68,6 +68,24 @@ TOPLUX-BSC-940-60      -> المركّب الأمريكي لضبط السكر
 MIRACLE-MEN-OIL-30ML   -> الدهان الأمريكي المعجزة للرجال
 ```
 
+For the RADC Shopify export, the script also fixes the common shifted layout automatically:
+
+```text
+A = customer name
+B = phone
+C = city
+E = quantity
+F = total price
+G = product name
+```
+
+In that layout, product names are mapped like this:
+
+```text
+Prosper Man / XXL / Men Oil     -> MIRACLE-MEN-OIL-30ML
+Blood Sugar / Complix / Complex -> TOPLUX-BSC-940-60
+```
+
 If a Shopify sheet has a different SKU, update the sheet SKU to one of the values above, or include a clear `PRODUCT NAME` containing `miracle`, `men oil`, `xxl`, `sugar`, or `balance`.
 
 ## Google Apps Script Setup
