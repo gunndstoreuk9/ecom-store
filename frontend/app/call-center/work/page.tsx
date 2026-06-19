@@ -16,7 +16,6 @@ import {
   ApiError,
   agentLogout,
   agentUpdateOrderCall,
-  agentUpdateOrderStatus,
   getAgentMe,
   getAgentOrders,
 } from "@/lib/api";
