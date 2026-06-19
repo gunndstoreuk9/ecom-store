@@ -278,11 +278,14 @@ def dispatch_orders(
 
 
 def cleanup_bad_sheet_imports(db: Session, *, dry_run: bool = False) -> tuple[int, int]:
-    """Remove only bad Google Sheet imports that are still waiting in the new queue.
+    """Remove Google Sheet imports that are still waiting in the new queue (not yet called).
 
-    Bad imports are rows that came from the Shopify/Google Sheet bridge but did not
-    contain one of the supported SKUs. They were imported only because an older script
-    inferred product SKU from product name.
+    Targets only orders that:
+    - Were imported from Google Sheet (sheet_sync_status="imported")
+    - Are still in "new" status with no call action taken yet
+    - Were imported from google_sheet
+
+    This is safe to run multiple times.
     """
     query = (
         db.query(Order)
@@ -290,7 +293,6 @@ def cleanup_bad_sheet_imports(db: Session, *, dry_run: bool = False) -> tuple[in
         .filter(Order.status == "new")
         .filter(Order.call_status.is_(None))
         .filter(Order.utm["imported_from"].astext == "google_sheet")
-        .filter(~Order.utm["sheet_sku"].astext.in_(SUPPORTED_SHEET_IMPORT_SKUS))
     )
     orders = query.all()
     matched = len(orders)
