@@ -19,8 +19,12 @@ FAKE_PATTERNS = {
 
 def normalize_morocco_phone(input_value: str) -> str:
     digits = re.sub(r"[\s\-().+]", "", input_value)
+    if digits.startswith("002120") and len(digits) == 15:
+        return "+212" + digits[6:]
     if digits.startswith("00212"):
         return "+" + digits[2:]
+    if digits.startswith("2120") and len(digits) == 13:
+        return "+212" + digits[4:]
     if digits.startswith("212") and len(digits) == 12:
         return "+" + digits
     if digits.startswith("0") and len(digits) == 10:

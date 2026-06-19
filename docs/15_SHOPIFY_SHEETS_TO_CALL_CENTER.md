@@ -26,6 +26,18 @@ FULL NAME
 PHONE NUMBER
 ```
 
+The Apps Script also accepts common Shopify aliases:
+
+```text
+SKU: SKU, Product SKU, Lineitem sku, Variant SKU
+FULL NAME: Full Name, Name, Customer Name, Shipping Name
+PHONE NUMBER: Phone Number, Phone, Mobile, Shipping Phone
+CITY: City, Shipping City
+ADDRESS: Address, Shipping Address, Address1
+QUANTITY: Quantity, Qty, Lineitem quantity
+TOTAL PRICE MAD: Total Price MAD, Total, Price, Amount
+```
+
 Recommended extra headers:
 
 ```text
@@ -75,6 +87,13 @@ const CALL_CENTER_IMPORT_TOKEN = 'CHANGE_THIS_TO_SHOPIFY_SHEET_WEBHOOK_TOKEN';
 ```
 
 with the same value you added to `SHOPIFY_SHEET_WEBHOOK_TOKEN`.
+
+If the script is not bound directly to the lead sheet, set these constants too:
+
+```js
+const SHOPIFY_SPREADSHEET_ID = 'GOOGLE_SHEET_ID_HERE';
+const SHOPIFY_SHEET_NAME = 'Sheet1';
+```
 
 5. Save the script.
 6. Run `sendNewLeadsToCallCenter` once and approve permissions.
