@@ -50,6 +50,11 @@ function sendNewLeadsToCallCenter() {
 
       try {
         const payload = buildPayload_(finalHeaders, row, rowNumber, sheet);
+        if (!looksLikeKnownSku_(payload.row.SKU)) {
+          sheet.getRange(rowNumber, statusCol).setValue('SKIPPED_NO_SKU');
+          sheet.getRange(rowNumber, errorCol).setValue('Skipped: no supported SKU in this row');
+          return;
+        }
         if (!isMoroccoPhone_(payload.row['PHONE NUMBER'])) {
           sheet.getRange(rowNumber, statusCol).setValue('SKIPPED_NON_MA');
           sheet.getRange(rowNumber, errorCol).setValue('Skipped: phone is not a Moroccan number');
@@ -185,10 +190,7 @@ function applyKnownSheetLayoutFixes_(rowObject, row) {
     if (inferredSku) rowObject.SKU = inferredSku;
   }
 
-  if (!looksLikeKnownSku_(rowObject.SKU)) {
-    const inferredSku = inferSkuFromProduct_(rowObject['PRODUCT NAME'] || colG || rowObject.SKU);
-    if (inferredSku) rowObject.SKU = inferredSku;
-  }
+  // Do not infer missing SKUs from product names. Only rows with explicit supported SKUs are imported.
 }
 
 function inferSkuFromProduct_(productName) {

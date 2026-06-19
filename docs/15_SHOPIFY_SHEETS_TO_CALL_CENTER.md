@@ -68,7 +68,9 @@ TOPLUX-BSC-940-60      -> المركّب الأمريكي لضبط السكر
 MIRACLE-MEN-OIL-30ML   -> الدهان الأمريكي المعجزة للرجال
 ```
 
-For the RADC Shopify export, the script also fixes the common shifted layout automatically:
+Only rows with an explicit supported SKU are imported. Rows without one are marked `SKIPPED_NO_SKU` and are not sent to the call center.
+
+For the RADC Shopify export, the script also fixes the common shifted layout automatically when column A contains a supported SKU:
 
 ```text
 A = customer name
@@ -79,14 +81,14 @@ F = total price
 G = product name
 ```
 
-In that layout, product names are mapped like this:
+Supported SKUs:
 
 ```text
-Prosper Man / XXL / Men Oil     -> MIRACLE-MEN-OIL-30ML
-Blood Sugar / Complix / Complex -> TOPLUX-BSC-940-60
+MIRACLE-MEN-OIL-30ML
+TOPLUX-BSC-940-60
 ```
 
-If a Shopify sheet has a different SKU, update the sheet SKU to one of the values above, or include a clear `PRODUCT NAME` containing `miracle`, `men oil`, `xxl`, `sugar`, or `balance`.
+If a Shopify sheet has a different SKU, update the sheet SKU to one of the values above before importing.
 
 ## Google Apps Script Setup
 
