@@ -16,6 +16,7 @@ class Settings(BaseSettings):
         alias="DATABASE_URL",
     )
     sheets_webhook_url: str = Field(default="", alias="SHEETS_WEBHOOK_URL")
+    shopify_sheet_webhook_token: str = Field(default="", alias="SHOPIFY_SHEET_WEBHOOK_TOKEN")
     admin_api_key: str = Field(default="", alias="ADMIN_API_KEY")
     call_center_api_key: str = Field(default="", alias="CALL_CENTER_API_KEY")
     admin_reset_pin: str = Field(default="", alias="ADMIN_RESET_PIN")
