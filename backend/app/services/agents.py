@@ -276,7 +276,6 @@ def get_agent_stats(db: Session, agent_id: str, *, days: int = 30) -> Optional[d
         if durations:
             avg_response_minutes = round(sum(durations) / len(durations), 1)
 
-    return {
     # Embed payout data to avoid a separate API call
     payout_orders = 0
     payout_commission = 5
