@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { BarChart3, LogOut, Phone, RefreshCw } from "lucide-react";
+import { BarChart3, Download, LogOut, Phone, RefreshCw } from "lucide-react";
 import {
   AdminOrder,
   AgentSession,
@@ -33,12 +33,19 @@ const CALL_STATUSES = [
 const CALL_VALUE_TO_API: Record<string, string> = { annule: "cancelled" };
 
 type TabValue = "new" | "follow_up" | "confirmed" | "all";
+type ProductFilter = "all" | "american-sugar-balance-complex" | "miracle-men-oil";
 
 const TABS: { value: TabValue; ar: string }[] = [
   { value: "new", ar: "طلبات جديدة" },
   { value: "follow_up", ar: "للمتابعة" },
   { value: "confirmed", ar: "للإرسال" },
   { value: "all", ar: "الكل" },
+];
+
+const PRODUCT_FILTERS: { value: ProductFilter; ar: string; shortAr: string }[] = [
+  { value: "all", ar: "كل المنتجات", shortAr: "الكل" },
+  { value: "american-sugar-balance-complex", ar: "المركّب الأمريكي لضبط السكر", shortAr: "ضبط السكر" },
+  { value: "miracle-men-oil", ar: "الدهان الأمريكي المعجزة للرجال", shortAr: "دهان الرجال" },
 ];
 
 function matchCity(value?: string | null): string {
@@ -53,10 +60,16 @@ function displayProductName(order: AdminOrder): string {
   return order.items?.[0]?.name_ar ?? order.hero_sku;
 }
 
-function errorMessage(err: unknown): string {
+function errMsg(err: unknown): string {
   if (err instanceof ApiError) return err.message;
   if (err instanceof Error) return err.message;
   return "تعذر حفظ نتيجة المكالمة.";
+}
+
+function csvCell(value: string | number) {
+  const str = String(value ?? "");
+  if (/[",\n]/.test(str)) return `"${str.replace(/"/g, '""')}"`;
+  return str;
 }
 
 export default function AgentWorkspacePage() {
@@ -65,11 +78,16 @@ export default function AgentWorkspacePage() {
   const [myStats, setMyStats] = useState<AgentStats | null>(null);
   const [orders, setOrders] = useState<AdminOrder[]>([]);
   const [counts, setCounts] = useState({ new: 0, follow_up: 0, confirmed: 0 });
+  const [productCounts, setProductCounts] = useState<Record<ProductFilter, number>>({ all: 0, "american-sugar-balance-complex": 0, "miracle-men-oil": 0 });
   const [tab, setTab] = useState<TabValue>("new");
+  const [productFilter, setProductFilter] = useState<ProductFilter>("all");
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showStats, setShowStats] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+
+  const selectedProductSku = productFilter === "all" ? undefined : productFilter;
 
   // Load session
   useEffect(() => {
@@ -89,19 +107,23 @@ export default function AgentWorkspacePage() {
     if (!session) return;
     void loadOrders(session.token);
     void loadCounts(session.token);
+    void loadProductCounts(session.token);
     void loadStats(session.token);
+    setSelected(new Set());
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session, tab]);
+  }, [session, tab, productFilter]);
 
   async function loadOrders(token: string) {
     setLoading(true); setError(null);
     try {
       const bucket = tab !== "all" ? tab : undefined;
-      const result = await getAgentOrders(token, { limit: 200, q: query, bucket });
-      setOrders(result.orders);
+      const result = await getAgentOrders(token, { limit: 200, q: query, bucket, ...(selectedProductSku ? { status: undefined } : {}) });
+      // client-side product filter if needed
+      const filtered = selectedProductSku ? result.orders.filter((o) => o.hero_sku === selectedProductSku) : result.orders;
+      setOrders(filtered);
     } catch (e) {
       if (e instanceof ApiError && e.status === 401) { handleLogout(); return; }
-      setError(errorMessage(e));
+      setError(errMsg(e));
     } finally { setLoading(false); }
   }
 
@@ -116,12 +138,25 @@ export default function AgentWorkspacePage() {
     } catch { /* non-blocking */ }
   }
 
+  async function loadProductCounts(token: string) {
+    try {
+      const bucket = tab !== "all" ? tab : undefined;
+      const all = await getAgentOrders(token, { limit: 200, bucket });
+      const cnt: Record<ProductFilter, number> = { all: all.total, "american-sugar-balance-complex": 0, "miracle-men-oil": 0 };
+      for (const o of all.orders) {
+        if (o.hero_sku === "american-sugar-balance-complex") cnt["american-sugar-balance-complex"]++;
+        if (o.hero_sku === "miracle-men-oil") cnt["miracle-men-oil"]++;
+      }
+      setProductCounts(cnt);
+    } catch { /* non-blocking */ }
+  }
+
   async function loadStats(token: string) {
     try { setMyStats(await getAgentMe(token)); } catch { /* non-blocking */ }
   }
 
   function onSaved(updated: AdminOrder) {
-    if (session) { void loadCounts(session.token); void loadStats(session.token); }
+    if (session) { void loadCounts(session.token); void loadProductCounts(session.token); void loadStats(session.token); }
     setOrders((cur) => {
       if ((tab === "new" || tab === "follow_up") && updated.status !== "new") {
         return cur.filter((o) => o.id !== updated.id);
@@ -130,11 +165,34 @@ export default function AgentWorkspacePage() {
     });
   }
 
+  function toggleSelected(id: string) {
+    setSelected((prev) => { const next = new Set(prev); next.has(id) ? next.delete(id) : next.add(id); return next; });
+  }
+
+  function exportCsv() {
+    const rows = orders.filter((o) => selected.size === 0 || selected.has(o.id));
+    if (!rows.length) return;
+    const header = ["Product", "Quantity", "Customer", "Phone", "Address", "City", "Price", "Commentaire"];
+    const lines = rows.map((o) => {
+      const city = o.delivery_city || o.city || "";
+      return [displayProductName(o), o.hero_qty, o.customer_name, o.phone_e164, o.address || "", city, o.total_mad, o.call_note || ""]
+        .map(csvCell).join(",");
+    });
+    const csv = "\uFEFF" + [header.join(","), ...lines].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = `orders-${new Date().toISOString().slice(0, 10)}.csv`; a.click();
+    URL.revokeObjectURL(url);
+  }
+
   async function handleLogout() {
     if (session) { try { await agentLogout(session.token); } catch { /**/ } }
     localStorage.removeItem(SESSION_KEY);
     router.replace("/call-center/login");
   }
+
+  const isDispatch = tab === "confirmed";
 
   if (!session) {
     return (
@@ -159,7 +217,6 @@ export default function AgentWorkspacePage() {
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            {/* Stats toggle */}
             <button
               onClick={() => setShowStats((v) => !v)}
               className="flex items-center gap-2 rounded-full bg-white/15 px-4 py-2 text-sm font-black transition hover:bg-white/25"
@@ -168,7 +225,7 @@ export default function AgentWorkspacePage() {
               النسب
             </button>
             <button
-              onClick={() => { void loadOrders(session.token); void loadCounts(session.token); }}
+              onClick={() => { void loadOrders(session.token); void loadCounts(session.token); void loadProductCounts(session.token); }}
               className="flex items-center gap-2 rounded-full bg-white/15 px-4 py-2 text-sm font-black transition hover:bg-white/25"
             >
               <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
@@ -250,6 +307,68 @@ export default function AgentWorkspacePage() {
         </div>
       </div>
 
+      {/* Product Filter */}
+      <div className="border-b border-gray-200 bg-[#F8FAFD]">
+        <div className="mx-auto max-w-[1280px] px-4 py-3 sm:px-6">
+          <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <p className="text-xs font-black uppercase tracking-wide text-[#667085]">المنتجات</p>
+              <p className="text-sm font-bold text-[#102033]">كل منتج عندو اللائحة والبيانات ديالو بوحدو.</p>
+            </div>
+            <span className="rounded-full bg-white px-3 py-1.5 text-xs font-black text-[#1E4A8C]">
+              المختار: {PRODUCT_FILTERS.find((f) => f.value === productFilter)?.shortAr ?? "الكل"}
+            </span>
+          </div>
+          <div className="grid gap-2 sm:grid-cols-3">
+            {PRODUCT_FILTERS.map((item) => (
+              <button
+                key={item.value}
+                onClick={() => setProductFilter(item.value)}
+                className={`rounded-2xl border p-3 text-start transition ${
+                  productFilter === item.value
+                    ? "border-[#1E4A8C] bg-[#1E4A8C] text-white shadow-lg"
+                    : "border-gray-200 bg-white text-[#102033] hover:border-[#1E4A8C]/40"
+                }`}
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-black">{item.ar}</p>
+                    <p className={`mt-1 text-[11px] font-bold ${productFilter === item.value ? "text-white/70" : "text-[#667085]"}`}>
+                      {item.value === "all" ? "جميع منتجات مركز الاتصال" : item.value}
+                    </p>
+                  </div>
+                  <span className={`rounded-full px-2.5 py-1 text-xs font-black ${productFilter === item.value ? "bg-white/20 text-white" : "bg-[#EEF5FF] text-[#1E4A8C]"}`}>
+                    {productCounts[item.value] ?? 0}
+                  </span>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Dispatch bar (confirmed tab only) */}
+      {isDispatch && (
+        <div className="border-b border-gray-200 bg-[#EEF5FF]">
+          <div className="mx-auto flex max-w-[1280px] flex-wrap items-center gap-3 px-4 py-3 sm:px-6">
+            <span className="text-xs font-black text-[#1E4A8C]">{selected.size} مختار</span>
+            <button
+              onClick={() => setSelected(selected.size === orders.length ? new Set() : new Set(orders.map((o) => o.id)))}
+              className="rounded-full bg-white px-3 py-1.5 text-xs font-black text-[#1E4A8C]"
+            >
+              {selected.size === orders.length && orders.length ? "إلغاء التحديد" : "تحديد الكل"}
+            </button>
+            <button
+              onClick={exportCsv}
+              className="flex items-center gap-2 rounded-full bg-white px-4 py-1.5 text-xs font-black text-[#102033]"
+            >
+              <Download className="h-4 w-4" />
+              تصدير CSV
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Orders */}
       <main className="mx-auto max-w-[1280px] px-4 py-6 sm:px-6">
         {error ? (
@@ -261,6 +380,9 @@ export default function AgentWorkspacePage() {
               key={order.id}
               order={order}
               token={session.token}
+              dispatchMode={isDispatch}
+              selected={selected.has(order.id)}
+              onToggleSelect={() => toggleSelected(order.id)}
               onSaved={onSaved}
               onError={(msg) => setError(msg)}
             />
@@ -277,13 +399,13 @@ export default function AgentWorkspacePage() {
 }
 
 function CallCard({
-  order,
-  token,
-  onSaved,
-  onError,
+  order, token, dispatchMode, selected, onToggleSelect, onSaved, onError,
 }: {
   order: AdminOrder;
   token: string;
+  dispatchMode: boolean;
+  selected: boolean;
+  onToggleSelect: () => void;
   onSaved: (order: AdminOrder) => void;
   onError: (msg: string) => void;
 }) {
@@ -307,10 +429,7 @@ function CallCard({
     address.trim() !== (order.address ?? "") ||
     city !== matchCity(order.delivery_city || order.city);
 
-  function pickOffer(offerQty: number, price: number) {
-    setQty(offerQty);
-    setTotal(price);
-  }
+  function pickOffer(offerQty: number, price: number) { setQty(offerQty); setTotal(price); }
 
   async function save() {
     if (saving) return;
@@ -320,37 +439,36 @@ function CallCard({
       let updated = order;
       if (detailsChanged) {
         updated = await agentEditOrder(token, order.id, {
-          customer_name: name.trim(),
-          qty,
-          total_mad: total,
-          address: address.trim(),
-          delivery_city: city,
+          customer_name: name.trim(), qty, total_mad: total,
+          address: address.trim(), delivery_city: city,
         });
       }
       if (disposition) {
         const apiStatus = CALL_VALUE_TO_API[disposition] ?? disposition;
         updated = await agentUpdateOrderCall(token, order.id, {
-          call_status: apiStatus,
-          call_note: note,
+          call_status: apiStatus, call_note: note,
           delivery_company: disposition === "confirmed" ? DELIVERY_COMPANY : undefined,
           delivery_city: disposition === "confirmed" ? city : undefined,
         });
       }
       setSaved(true);
       onSaved(updated);
-    } catch (err) {
-      onError(errorMessage(err));
-    } finally { setSaving(false); }
+    } catch (err) { onError(errMsg(err)); }
+    finally { setSaving(false); }
   }
 
   return (
-    <div className="rounded-[26px] border border-gray-100 bg-white p-5 shadow-sm">
-      {/* Top row */}
+    <div className={`rounded-[26px] border bg-white p-5 shadow-sm ${selected ? "border-[#16A34A] ring-2 ring-emerald-200" : "border-gray-100"}`}>
       <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-xs font-black text-[#1E4A8C]">{order.public_order_number}</p>
-          <p className="text-sm font-bold text-[#102033]">{product}</p>
-          <p className="mt-1 font-mono text-sm text-[#102033]" dir="ltr">{order.phone_e164}</p>
+        <div className="flex items-start gap-3">
+          {dispatchMode && (
+            <input type="checkbox" checked={selected} onChange={onToggleSelect} className="mt-1 h-5 w-5 accent-[#16A34A]" />
+          )}
+          <div>
+            <p className="text-xs font-black text-[#1E4A8C]">{order.public_order_number}</p>
+            <p className="text-sm font-bold text-[#102033]">{product}</p>
+            <p className="mt-1 font-mono text-sm text-[#102033]" dir="ltr">{order.phone_e164}</p>
+          </div>
         </div>
         <div className="text-end">
           <p className="text-lg font-black text-[#1E4A8C]">{formatMad(total)}</p>
@@ -361,7 +479,6 @@ function CallCard({
         </div>
       </div>
 
-      {/* Delivery tracking / error */}
       {order.delivery_tracking ? (
         <p className="mt-3 rounded-xl bg-emerald-50 px-3 py-2 text-xs font-black text-emerald-700">
           تسيفط لـ {order.delivery_company || DELIVERY_COMPANY} · {order.delivery_tracking}
@@ -373,44 +490,30 @@ function CallCard({
         </p>
       ) : null}
 
-      {/* Call / WhatsApp buttons */}
       <div className="mt-4 flex gap-2">
-        <a
-          href={`tel:${order.phone_e164}`}
-          className="flex flex-1 items-center justify-center gap-2 rounded-full bg-[#1E4A8C] px-4 py-2.5 text-sm font-black text-white transition hover:bg-[#173B70]"
-        >
+        <a href={`tel:${order.phone_e164}`} className="flex flex-1 items-center justify-center gap-2 rounded-full bg-[#1E4A8C] px-4 py-2.5 text-sm font-black text-white transition hover:bg-[#173B70]">
           <Phone className="h-4 w-4" />
           اتصل
         </a>
-        <a
-          href={`https://wa.me/${phoneDigits}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex flex-1 items-center justify-center gap-2 rounded-full bg-[#16A34A] px-4 py-2.5 text-sm font-black text-white transition hover:bg-green-700"
-        >
+        <a href={`https://wa.me/${phoneDigits}`} target="_blank" rel="noopener noreferrer"
+          className="flex flex-1 items-center justify-center gap-2 rounded-full bg-[#16A34A] px-4 py-2.5 text-sm font-black text-white transition hover:bg-green-700">
           WhatsApp
         </a>
       </div>
 
-      {/* Editing: customer + offer + qty + total */}
+      {/* Customer + offer */}
       <div className="mt-4 space-y-3 rounded-2xl bg-[#F8FAFD] p-4">
         <div>
           <label className="mb-1 block text-[11px] font-black text-[#667085]">الزبون</label>
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm font-bold outline-none focus:border-[#1E4A8C]"
-          />
+          <input value={name} onChange={(e) => setName(e.target.value)}
+            className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm font-bold outline-none focus:border-[#1E4A8C]" />
         </div>
         <div>
           <label className="mb-1 block text-[11px] font-black text-[#667085]">العرض</label>
           <div className="flex flex-wrap gap-2">
             {HERO_OFFERS.map((offer) => (
-              <button
-                key={offer.id}
-                onClick={() => pickOffer(offer.qty, offer.priceMad)}
-                className={`rounded-full px-3 py-1.5 text-xs font-black transition ${qty === offer.qty ? "bg-[#1E4A8C] text-white" : "bg-white text-[#667085] border border-gray-200"}`}
-              >
+              <button key={offer.id} onClick={() => pickOffer(offer.qty, offer.priceMad)}
+                className={`rounded-full px-3 py-1.5 text-xs font-black transition ${qty === offer.qty ? "bg-[#1E4A8C] text-white" : "bg-white text-[#667085] border border-gray-200"}`}>
                 {offer.sublabel} · {offer.priceMad}
               </button>
             ))}
@@ -419,19 +522,13 @@ function CallCard({
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="mb-1 block text-[11px] font-black text-[#667085]">الكمية</label>
-            <input
-              type="number" min={1} value={qty}
-              onChange={(e) => setQty(Math.max(1, Number(e.target.value) || 1))}
-              className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm font-bold outline-none focus:border-[#1E4A8C]"
-            />
+            <input type="number" min={1} value={qty} onChange={(e) => setQty(Math.max(1, Number(e.target.value) || 1))}
+              className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm font-bold outline-none focus:border-[#1E4A8C]" />
           </div>
           <div>
             <label className="mb-1 block text-[11px] font-black text-[#667085]">المجموع (درهم)</label>
-            <input
-              type="number" min={0} value={total}
-              onChange={(e) => setTotal(Math.max(0, Number(e.target.value) || 0))}
-              className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm font-bold outline-none focus:border-[#1E4A8C]"
-            />
+            <input type="number" min={0} value={total} onChange={(e) => setTotal(Math.max(0, Number(e.target.value) || 0))}
+              className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm font-bold outline-none focus:border-[#1E4A8C]" />
           </div>
         </div>
       </div>
@@ -440,18 +537,12 @@ function CallCard({
       <div className="mt-3 space-y-3 rounded-2xl bg-[#F8FAFD] p-4">
         <div>
           <label className="mb-1 block text-[11px] font-black text-[#667085]">العنوان</label>
-          <textarea
-            value={address}
-            onChange={(e) => setAddress(e.target.value)}
-            rows={2}
+          <textarea value={address} onChange={(e) => setAddress(e.target.value)} rows={2}
             placeholder="الشارع، الحي..."
-            className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm font-semibold outline-none focus:border-[#1E4A8C]"
-          />
+            className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm font-semibold outline-none focus:border-[#1E4A8C]" />
         </div>
         <div>
-          <label className="mb-1 block text-[11px] font-black text-[#1E4A8C]">
-            مدينة {DELIVERY_COMPANY}
-          </label>
+          <label className="mb-1 block text-[11px] font-black text-[#1E4A8C]">مدينة {DELIVERY_COMPANY}</label>
           <CitySelect value={city} onChange={setCity} />
         </div>
       </div>
@@ -461,41 +552,21 @@ function CallCard({
         <p className="mb-2 text-xs font-black text-[#667085]">نتيجة المكالمة</p>
         <div className="flex flex-wrap gap-2">
           {CALL_STATUSES.map((item) => (
-            <button
-              key={item.value}
-              onClick={() => setDisposition(item.value)}
-              className={`rounded-full px-3 py-1.5 text-xs font-black transition ${disposition === item.value ? item.tone : item.soft}`}
-            >
+            <button key={item.value} onClick={() => setDisposition(item.value)}
+              className={`rounded-full px-3 py-1.5 text-xs font-black transition ${disposition === item.value ? item.tone : item.soft}`}>
               {item.ar}
             </button>
           ))}
         </div>
       </div>
 
-      {/* Note */}
-      <textarea
-        value={note}
-        onChange={(e) => setNote(e.target.value)}
-        rows={2}
+      <textarea value={note} onChange={(e) => setNote(e.target.value)} rows={2}
         placeholder="ملاحظة (اختياري)"
-        className="mt-3 w-full rounded-2xl border border-gray-200 px-4 py-3 text-sm font-semibold outline-none focus:border-[#1E4A8C]"
-      />
+        className="mt-3 w-full rounded-2xl border border-gray-200 px-4 py-3 text-sm font-semibold outline-none focus:border-[#1E4A8C]" />
 
-      {/* Save button */}
-      <button
-        onClick={() => void save()}
-        disabled={(!disposition && !detailsChanged) || saving}
-        className="mt-4 w-full rounded-full bg-[#102033] px-5 py-3 text-sm font-black text-white transition hover:bg-[#1E4A8C] disabled:cursor-not-allowed disabled:opacity-50"
-      >
-        {saving
-          ? "كيتسجل..."
-          : saved
-          ? "تسجل ✓"
-          : disposition === "confirmed"
-          ? "تأكيد وحفظ"
-          : disposition
-          ? "تسجيل النتيجة"
-          : "حفظ التعديلات"}
+      <button onClick={() => void save()} disabled={(!disposition && !detailsChanged) || saving}
+        className="mt-4 w-full rounded-full bg-[#102033] px-5 py-3 text-sm font-black text-white transition hover:bg-[#1E4A8C] disabled:cursor-not-allowed disabled:opacity-50">
+        {saving ? "كيتسجل..." : saved ? "تسجل ✓" : disposition === "confirmed" ? "تأكيد وحفظ" : disposition ? "تسجيل النتيجة" : "حفظ التعديلات"}
       </button>
     </div>
   );
@@ -515,38 +586,27 @@ function CitySelect({ value, onChange }: { value: string; onChange: (city: strin
 
   return (
     <div className="relative">
-      <input
-        value={query}
+      <input value={query}
         onChange={(e) => { setQuery(e.target.value); setOpen(true); }}
         onFocus={() => setOpen(true)}
         onBlur={() => setTimeout(() => setOpen(false), 150)}
         placeholder="كتب اسم المدينة..."
-        className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm font-bold outline-none focus:border-[#1E4A8C]"
-      />
-      {open ? (
+        className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm font-bold outline-none focus:border-[#1E4A8C]" />
+      {open && (
         <ul className="absolute z-30 mt-1 max-h-56 w-full overflow-auto rounded-xl border border-gray-200 bg-white shadow-lg">
-          {matches.length ? (
-            matches.map((c) => (
-              <li key={c}>
-                <button
-                  type="button"
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    onChange(c);
-                    setQuery(c);
-                    setOpen(false);
-                  }}
-                  className={`block w-full px-3 py-2 text-start text-sm font-semibold transition hover:bg-[#EEF5FF] ${c === value ? "bg-[#EEF5FF] text-[#1E4A8C]" : "text-[#102033]"}`}
-                >
-                  {c}
-                </button>
-              </li>
-            ))
-          ) : (
+          {matches.length ? matches.map((c) => (
+            <li key={c}>
+              <button type="button"
+                onMouseDown={(e) => { e.preventDefault(); onChange(c); setQuery(c); setOpen(false); }}
+                className={`block w-full px-3 py-2 text-start text-sm font-semibold transition hover:bg-[#EEF5FF] ${c === value ? "bg-[#EEF5FF] text-[#1E4A8C]" : "text-[#102033]"}`}>
+                {c}
+              </button>
+            </li>
+          )) : (
             <li className="px-3 py-2 text-sm font-semibold text-[#94A3B8]">ماكاينة</li>
           )}
         </ul>
-      ) : null}
+      )}
     </div>
   );
 }
