@@ -8,7 +8,7 @@ from alembic import op
 import sqlalchemy as sa
 
 revision = "0010_add_agent_payout_reset"
-down_revision = "20260619_0009_add_agents"
+down_revision = "20260619_0009"
 branch_labels = None
 depends_on = None
 
