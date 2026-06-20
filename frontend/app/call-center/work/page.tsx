@@ -101,7 +101,7 @@ export default function AgentWorkspacePage() {
     setError(null);
     try {
       const bucket = tab !== "all" ? tab : undefined;
-      const result = await getAgentOrders(token, { limit: 300, q: query, bucket });
+      const result = await getAgentOrders(token, { limit: 200, q: query, bucket });
       setOrders(result.orders);
     } catch (e) {
       if (e instanceof ApiError && e.status === 401) {

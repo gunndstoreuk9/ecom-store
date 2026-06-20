@@ -11,8 +11,9 @@ import { PixelScripts } from "@/components/tracking/PixelScripts";
 export function SiteChrome({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isAdmin = pathname?.startsWith("/admin");
+  const isCallCenter = pathname?.startsWith("/call-center");
 
-  if (isAdmin) {
+  if (isAdmin || isCallCenter) {
     return <main>{children}</main>;
   }
 
