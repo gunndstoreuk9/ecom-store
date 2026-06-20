@@ -555,8 +555,20 @@ function AgentPayoutPanel({
   const [error, setError] = useState<string | null>(null);
   const [loadingPayout, setLoadingPayout] = useState(!payout);
 
-  const isPaid = payout?.status === "paid";
-  const lastReset = payout?.last_reset_at ? payout.last_reset_at.slice(0, 10) : "—";
+  // Fallback zero-payout shown when API is unavailable
+  const displayPayout: ConfirmationPayout = payout ?? {
+    orders_count: 0,
+    commission_per_order: 5,
+    base_amount_mad: 0,
+    manual_adjustment_mad: 0,
+    total_due_mad: 0,
+    last_reset_at: null,
+    status: "paid",
+    details: null,
+  };
+
+  const isPaid = displayPayout.status === "paid";
+  const lastReset = displayPayout.last_reset_at ? displayPayout.last_reset_at.slice(0, 10) : "—";
 
   // Load payout on mount if not yet loaded, and on version bump (after dispatch)
   useEffect(() => {
@@ -584,28 +596,12 @@ function AgentPayoutPanel({
   return (
     <div className="border-b border-[#11233c] bg-gradient-to-l from-[#0B1724] to-[#12325f] text-white">
       <div className="mx-auto max-w-[1280px] px-4 py-4 sm:px-6">
-        {loadingPayout && !payout && (
-          <div className="flex items-center gap-3">
-            <Wallet className="h-5 w-5 text-amber-300" />
-            <span className="text-sm font-black text-white/70">مستحقاتي — جاري التحميل...</span>
-            <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-          </div>
-        )}
-        {!loadingPayout && !payout && (
-          <div className="flex items-center gap-3">
-            <Wallet className="h-5 w-5 text-amber-300" />
-            <span className="text-sm font-black text-white/70">مستحقاتي</span>
-            <span className="text-xs text-white/40">— تعذر التحميل</span>
-            <button onClick={() => { setLoadingPayout(true); getAgentPayout(token).then((p) => { onPayoutChange(p); setLoadingPayout(false); }).catch(() => setLoadingPayout(false)); }}
-              className="text-xs text-amber-300 hover:text-amber-200 underline">إعادة المحاولة</button>
-          </div>
-        )}
-        {payout && (
-          <>
+        <>
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-2">
                 <Wallet className="h-5 w-5 text-amber-300" />
                 <h2 className="text-base font-black">مستحقاتي</h2>
+                {loadingPayout && <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-white/30 border-t-white" />}
               </div>
               <span className={`rounded-full px-3 py-1 text-xs font-black ${isPaid ? "bg-emerald-500/20 text-emerald-300" : "bg-amber-500/20 text-amber-300"}`}>
                 {isPaid ? "مدفوع" : "غير مدفوع"}
@@ -615,15 +611,15 @@ function AgentPayoutPanel({
             <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
               <div className="rounded-2xl bg-white/10 p-3">
                 <p className="text-[10px] font-black uppercase tracking-wide text-white/60">طلبات مؤكدة ومرسلة</p>
-                <p className="mt-1 text-2xl font-black">{payout.orders_count.toLocaleString()}</p>
+                <p className="mt-1 text-2xl font-black">{displayPayout.orders_count.toLocaleString()}</p>
               </div>
               <div className="rounded-2xl bg-white/10 p-3">
                 <p className="text-[10px] font-black uppercase tracking-wide text-white/60">العمولة / طلب</p>
-                <p className="mt-1 text-2xl font-black">{payout.commission_per_order} <span className="text-sm">MAD</span></p>
+                <p className="mt-1 text-2xl font-black">{displayPayout.commission_per_order} <span className="text-sm">MAD</span></p>
               </div>
               <div className="rounded-2xl bg-amber-400/15 p-3 ring-1 ring-amber-300/30 sm:col-span-1 col-span-2">
                 <p className="text-[10px] font-black uppercase tracking-wide text-amber-200">المجموع المستحق</p>
-                <p className="mt-1 text-2xl font-black text-amber-300">{formatMad(payout.total_due_mad)}</p>
+                <p className="mt-1 text-2xl font-black text-amber-300">{formatMad(displayPayout.total_due_mad)}</p>
               </div>
             </div>
 
@@ -672,7 +668,6 @@ function AgentPayoutPanel({
               </div>
             )}
           </>
-        )}
       </div>
     </div>
   );
