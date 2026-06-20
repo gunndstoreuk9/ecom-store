@@ -77,6 +77,7 @@ export default function CallCenterPage() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [role, setRole] = useState<"admin" | "call_center" | null>(null);
   const [payoutVersion, setPayoutVersion] = useState(0);
+  const [loginError, setLoginError] = useState<string | null>(null);
 
   const isArabic = lang === "ar";
   const t = (en: string, ar: string) => (isArabic ? ar : en);
@@ -109,8 +110,20 @@ export default function CallCenterPage() {
       return;
     }
     getAdminRole(savedKey)
-      .then((r) => setRole(r.role))
-      .catch(() => setRole(null));
+      .then((r) => {
+        // Only allow full admins — reject call_center keys
+        if (r.role === "admin") {
+          setRole(r.role);
+          setLoginError(null);
+        } else {
+          setRole(null);
+          setSavedKey("");
+          setAdminKey("");
+          window.localStorage.removeItem(ADMIN_KEY_STORAGE);
+          setLoginError("غير مصرح — هذه الصفحة للأدمين فقط.");
+        }
+      })
+      .catch(() => { setRole(null); setLoginError("مفتاح غير صحيح."); });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [savedKey]);
 
@@ -182,6 +195,7 @@ export default function CallCenterPage() {
     event.preventDefault();
     const key = adminKey.trim();
     if (!key) return;
+    setLoginError(null);
     window.localStorage.setItem(ADMIN_KEY_STORAGE, key);
     setSavedKey(key);
   }
@@ -272,11 +286,14 @@ export default function CallCenterPage() {
             <input
               type="password"
               value={adminKey}
-              onChange={(event) => setAdminKey(event.target.value)}
+              onChange={(event) => { setAdminKey(event.target.value); setLoginError(null); }}
               placeholder="ADMIN_API_KEY"
               className="w-full rounded-2xl border border-gray-200 px-4 py-3 text-left font-mono text-sm outline-none focus:border-[#1E4A8C]"
               dir="ltr"
             />
+            {loginError && (
+              <p className="rounded-xl bg-rose-50 px-3 py-2 text-sm font-bold text-rose-600">{loginError}</p>
+            )}
             <button className="w-full rounded-full bg-[#1E4A8C] px-5 py-3 text-sm font-black text-white">{t("Enter", "دخول")}</button>
           </form>
         </div>
