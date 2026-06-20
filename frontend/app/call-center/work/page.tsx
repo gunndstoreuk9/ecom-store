@@ -195,10 +195,22 @@ export default function AgentWorkspacePage() {
   }
 
   async function loadStats(token: string) {
-    // Load each independently so one failure doesn't hide the others
-    getAgentMe(token).then(setMyStats).catch(() => { /* non-blocking */ });
+    // Load stats + payout together (payout is embedded in /me response)
+    getAgentMe(token).then((s) => {
+      setMyStats(s);
+      // Extract payout from embedded stats fields
+      setPayout({
+        orders_count: s.payout_orders_count ?? 0,
+        commission_per_order: s.payout_commission_per_order ?? 5,
+        base_amount_mad: (s.payout_orders_count ?? 0) * (s.payout_commission_per_order ?? 5),
+        manual_adjustment_mad: 0,
+        total_due_mad: s.payout_total_due_mad ?? 0,
+        last_reset_at: s.payout_last_reset_at ?? null,
+        status: s.payout_status ?? "paid",
+        details: null,
+      });
+    }).catch(() => { /* non-blocking */ });
     getAgentCallCenterStats(token, selectedProductSku).then(setDetailedStats).catch(() => { /* non-blocking */ });
-    getAgentPayout(token).then(setPayout).catch(() => { /* non-blocking */ });
   }
 
   function onSaved(updated: AdminOrder) {

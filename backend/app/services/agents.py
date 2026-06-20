@@ -277,6 +277,24 @@ def get_agent_stats(db: Session, agent_id: str, *, days: int = 30) -> Optional[d
             avg_response_minutes = round(sum(durations) / len(durations), 1)
 
     return {
+    # Embed payout data to avoid a separate API call
+    payout_orders = 0
+    payout_commission = 5
+    payout_total = 0
+    payout_reset_at = None
+    payout_status = "paid"
+    try:
+        from app.services.payouts import get_agent_payout as _gap
+        p = _gap(db, agent_id=str(agent.id))
+        payout_orders = p.orders_count
+        payout_commission = p.commission_per_order
+        payout_total = p.total_due_mad
+        payout_reset_at = p.last_reset_at
+        payout_status = p.status
+    except Exception:
+        pass
+
+    return {
         "agent_id": str(agent.id),
         "display_name": agent.display_name,
         "username": agent.username,
@@ -294,6 +312,12 @@ def get_agent_stats(db: Session, agent_id: str, *, days: int = 30) -> Optional[d
         "follow_up_count": follow_up_count,
         "confirmed_queue": confirmed_queue,
         "dispatched_count": dispatched_count,
+        # Payout (embedded)
+        "payout_orders_count": payout_orders,
+        "payout_commission_per_order": payout_commission,
+        "payout_total_due_mad": payout_total,
+        "payout_last_reset_at": payout_reset_at,
+        "payout_status": payout_status,
     }
 
 

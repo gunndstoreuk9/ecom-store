@@ -827,6 +827,12 @@ export interface AgentStats {
   follow_up_count: number;
   confirmed_queue: number;
   dispatched_count: number;
+  // Embedded payout
+  payout_orders_count: number;
+  payout_commission_per_order: number;
+  payout_total_due_mad: number;
+  payout_last_reset_at: string | null;
+  payout_status: "paid" | "unpaid";
 }
 
 export interface AgentCreatePayload {

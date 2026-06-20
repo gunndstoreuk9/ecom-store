@@ -63,3 +63,9 @@ class AgentStatsResponse(BaseModel):
     follow_up_count: int = 0
     confirmed_queue: int = 0
     dispatched_count: int = 0
+    # Payout (embedded to avoid a separate API call)
+    payout_orders_count: int = 0
+    payout_commission_per_order: int = 5
+    payout_total_due_mad: int = 0
+    payout_last_reset_at: Optional[datetime] = None
+    payout_status: str = "paid"
