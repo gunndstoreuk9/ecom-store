@@ -190,6 +190,7 @@ def update_admin_order_details(
     db: Session,
     order_id: str,
     *,
+    agent_id: Optional[str] = None,
     customer_name: Optional[str] = None,
     phone_raw: Optional[str] = None,
     phone_e164: Optional[str] = None,
@@ -205,6 +206,8 @@ def update_admin_order_details(
         return None
     order = db.get(Order, order_uuid)
     if not order:
+        return None
+    if agent_id and str(order.assigned_agent_id) != agent_id:
         return None
 
     if customer_name is not None:

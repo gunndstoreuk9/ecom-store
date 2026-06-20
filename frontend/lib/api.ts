@@ -939,3 +939,11 @@ export async function agentUpdateOrderStatus(token: string, orderId: string, sta
     body: JSON.stringify({ status }),
   });
 }
+
+export async function agentEditOrder(token: string, orderId: string, payload: AdminOrderEditPayload): Promise<AdminOrder> {
+  return api<AdminOrder>(`/v1/agents/me/orders/${orderId}/details`, {
+    method: "PATCH",
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify(payload),
+  });
+}

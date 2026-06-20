@@ -32,8 +32,8 @@ from app.services.agents import (
     list_agents,
     update_agent,
 )
-from app.services.admin import list_admin_orders, update_admin_order_call, update_admin_order_status
-from app.schemas.admin import AdminOrderListItem, AdminOrdersResponse, AdminOrderCallUpdate, AdminOrderStatusUpdate
+from app.services.admin import list_admin_orders, update_admin_order_call, update_admin_order_details, update_admin_order_status
+from app.schemas.admin import AdminOrderEditUpdate, AdminOrderListItem, AdminOrdersResponse, AdminOrderCallUpdate, AdminOrderStatusUpdate
 
 router = APIRouter(prefix="/agents", tags=["agents"])
 
@@ -256,6 +256,32 @@ async def agent_update_status(
 ) -> AdminOrderListItem:
     payload = await _parse_body(request, AdminOrderStatusUpdate)
     order = update_admin_order_status(db, order_id, payload, agent_id=agent_id)
+    if not order:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found or not assigned to you")
+    return order
+
+
+@router.patch("/me/orders/{order_id}/details", response_model=AdminOrderListItem)
+async def agent_update_details(
+    order_id: str,
+    request: Request,
+    agent_id: str = Depends(_require_agent_session),
+    db: Session = Depends(get_db),
+) -> AdminOrderListItem:
+    payload = await _parse_body(request, AdminOrderEditUpdate)
+    order = update_admin_order_details(
+        db,
+        order_id,
+        agent_id=agent_id,
+        customer_name=payload.customer_name,
+        phone_raw=payload.phone_raw,
+        phone_e164=payload.phone_e164,
+        address=payload.address,
+        city=payload.city,
+        delivery_city=payload.delivery_city,
+        qty=payload.qty,
+        total_mad=payload.total_mad,
+    )
     if not order:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found or not assigned to you")
     return order
