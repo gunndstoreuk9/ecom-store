@@ -6,6 +6,7 @@ from typing import Optional, Type, TypeVar
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, status
 from pydantic import BaseModel, ValidationError
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -77,10 +78,24 @@ async def _parse_body(request: Request, model: Type[ModelT]) -> ModelT:
 
 @router.post("/login", response_model=AgentLoginResponse)
 async def agent_login(request: Request, db: Session = Depends(get_db)) -> AgentLoginResponse:
+    from app.models.agent import Agent as _Agent
+    from app.models.order import Order as _Order
     payload = await _parse_body(request, AgentLoginRequest)
     agent = authenticate_agent(db, payload.username, payload.password)
     if not agent:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid username or password")
+
+    # Auto-assign unassigned dispatched orders if this is the only active agent
+    try:
+        active_agents = db.query(func.count(_Agent.id)).filter(_Agent.status == "active").scalar() or 0
+        if active_agents == 1:
+            db.query(_Order).filter(_Order.assigned_agent_id.is_(None)).update(
+                {"assigned_agent_id": agent.id}, synchronize_session=False
+            )
+            db.commit()
+    except Exception:
+        db.rollback()
+
     token = create_agent_session(str(agent.id))
     return AgentLoginResponse(
         token=token,

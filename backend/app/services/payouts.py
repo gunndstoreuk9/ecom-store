@@ -99,7 +99,6 @@ def get_agent_payout(db: Session, *, agent_id: str, include_details: bool = Fals
             manual_adjustment_mad=0, total_due_mad=0, last_reset_at=None, status="paid",
         )
 
-    # Try agent-specific payout first; fall back to global if column missing or no orders found
     try:
         state = _get_or_create_state(db)
         aid = agent.id
@@ -115,38 +114,8 @@ def get_agent_payout(db: Session, *, agent_id: str, include_details: bool = Fals
             base_q = base_q.filter(Order.dispatched_at > agent_reset_at)
 
         orders_count = base_q.with_entities(func.count(Order.id)).scalar() or 0
-
-        # If no agent-specific orders, use global totals (covers pre-agent-system dispatches)
-        if orders_count == 0:
-            global_q = _eligible_query(db, state)
-            orders_count = global_q.with_entities(func.count(Order.id)).scalar() or 0
-            base_amount = orders_count * state.commission_per_order
-            details = None
-            if include_details:
-                rows = global_q.order_by(Order.dispatched_at.desc()).limit(500).all()
-                details = [
-                    ConfirmationPayoutDetailItem(
-                        order_id=o.id,
-                        public_order_number=o.public_order_number,
-                        customer_name=o.customer_name,
-                        total_mad=o.total_mad,
-                        commission_mad=state.commission_per_order,
-                        dispatched_at=o.dispatched_at,
-                    )
-                    for o in rows
-                ]
-            return ConfirmationPayoutResponse(
-                orders_count=orders_count,
-                commission_per_order=state.commission_per_order,
-                base_amount_mad=base_amount,
-                manual_adjustment_mad=0,
-                total_due_mad=base_amount,
-                last_reset_at=agent_reset_at,
-                status="unpaid" if base_amount > 0 else "paid",
-                details=details,
-            )
-
         base_amount = orders_count * state.commission_per_order
+
         details = None
         if include_details:
             rows = base_q.order_by(Order.dispatched_at.desc()).limit(500).all()
@@ -172,9 +141,11 @@ def get_agent_payout(db: Session, *, agent_id: str, include_details: bool = Fals
             details=details,
         )
     except Exception:
-        # Column missing or DB error — fall back to global payout
         db.rollback()
-        return get_payout(db, include_details=include_details)
+        return ConfirmationPayoutResponse(
+            orders_count=0, commission_per_order=5, base_amount_mad=0,
+            manual_adjustment_mad=0, total_due_mad=0, last_reset_at=None, status="paid",
+        )
 
 
 def reset_agent_payout(db: Session, *, agent_id: str, pin: str) -> ConfirmationPayoutResponse:
