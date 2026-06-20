@@ -32,8 +32,8 @@ from app.services.agents import (
     list_agents,
     update_agent,
 )
-from app.services.admin import list_admin_orders, update_admin_order_call, update_admin_order_details, update_admin_order_status
-from app.schemas.admin import AdminOrderEditUpdate, AdminOrderListItem, AdminOrdersResponse, AdminOrderCallUpdate, AdminOrderStatusUpdate
+from app.services.admin import dispatch_orders, list_admin_orders, update_admin_order_call, update_admin_order_details, update_admin_order_status
+from app.schemas.admin import AdminDispatchRequest, AdminDispatchResponse, AdminOrderEditUpdate, AdminOrderListItem, AdminOrdersResponse, AdminOrderCallUpdate, AdminOrderStatusUpdate
 
 router = APIRouter(prefix="/agents", tags=["agents"])
 
@@ -259,6 +259,35 @@ async def agent_update_status(
     if not order:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found or not assigned to you")
     return order
+
+
+@router.post("/me/orders/dispatch", response_model=AdminDispatchResponse)
+async def agent_dispatch_orders(
+    request: Request,
+    agent_id: str = Depends(_require_agent_session),
+    db: Session = Depends(get_db),
+) -> AdminDispatchResponse:
+    payload = await _parse_body(request, AdminDispatchRequest)
+    # Filter to only orders assigned to this agent
+    from uuid import UUID as _UUID
+    from app.models.order import Order as _Order
+    valid_ids = [
+        oid for oid in payload.order_ids
+        if _is_agent_order(db, oid, agent_id)
+    ]
+    if not valid_ids:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="No orders assigned to you in this list")
+    return dispatch_orders(db, order_ids=valid_ids, delivery_company=payload.delivery_company, new_status=payload.status)
+
+
+def _is_agent_order(db, order_id: str, agent_id: str) -> bool:
+    from uuid import UUID as _UUID
+    from app.models.order import Order as _Order
+    try:
+        order = db.get(_Order, _UUID(order_id))
+        return order is not None and str(order.assigned_agent_id) == agent_id
+    except Exception:
+        return False
 
 
 @router.patch("/me/orders/{order_id}/details", response_model=AdminOrderListItem)

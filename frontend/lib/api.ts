@@ -947,3 +947,16 @@ export async function agentEditOrder(token: string, orderId: string, payload: Ad
     body: JSON.stringify(payload),
   });
 }
+
+export async function agentDispatchOrders(
+  token: string,
+  orderIds: string[],
+  deliveryCompany: string,
+  newStatus: string = "shipped",
+): Promise<AdminDispatchResponse> {
+  return api<AdminDispatchResponse>(`/v1/agents/me/orders/dispatch`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ order_ids: orderIds, delivery_company: deliveryCompany, status: newStatus }),
+  });
+}

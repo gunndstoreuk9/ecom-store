@@ -8,6 +8,7 @@ import {
   AgentSession,
   AgentStats,
   ApiError,
+  agentDispatchOrders,
   agentEditOrder,
   agentLogout,
   agentUpdateOrderCall,
@@ -86,6 +87,8 @@ export default function AgentWorkspacePage() {
   const [error, setError] = useState<string | null>(null);
   const [showStats, setShowStats] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [dispatching, setDispatching] = useState(false);
+  const [dispatchResult, setDispatchResult] = useState<string | null>(null);
 
   const selectedProductSku = productFilter === "all" ? undefined : productFilter;
 
@@ -190,6 +193,28 @@ export default function AgentWorkspacePage() {
     if (session) { try { await agentLogout(session.token); } catch { /**/ } }
     localStorage.removeItem(SESSION_KEY);
     router.replace("/call-center/login");
+  }
+
+  async function handleDispatch() {
+    if (!session) return;
+    const ids = selected.size > 0 ? Array.from(selected) : orders.map((o) => o.id);
+    if (!ids.length) return;
+    setDispatching(true);
+    setDispatchResult(null);
+    setError(null);
+    try {
+      const res = await agentDispatchOrders(session.token, ids, DELIVERY_COMPANY);
+      const succeeded = res.orders.filter((o) => !o.delivery_error).length;
+      const failed = res.orders.filter((o) => o.delivery_error).length;
+      setDispatchResult(failed > 0 ? `✓ ${succeeded} تم الإرسال · ✗ ${failed} فشل` : `✓ تم إرسال ${succeeded} طلب إلى Digylog`);
+      void loadOrders(session.token);
+      void loadCounts(session.token);
+      setSelected(new Set());
+    } catch (e) {
+      setError(errMsg(e));
+    } finally {
+      setDispatching(false);
+    }
   }
 
   const isDispatch = tab === "confirmed";
@@ -365,6 +390,21 @@ export default function AgentWorkspacePage() {
               <Download className="h-4 w-4" />
               تصدير CSV
             </button>
+            <button
+              onClick={handleDispatch}
+              disabled={dispatching || orders.length === 0}
+              className="flex items-center gap-2 rounded-full bg-[#1E4A8C] px-4 py-1.5 text-xs font-black text-white disabled:opacity-50"
+            >
+              {dispatching ? (
+                <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+              ) : (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} className="h-4 w-4"><path d="M22 2L11 13" /><path d="M22 2L15 22l-4-9-9-4 20-7z" /></svg>
+              )}
+              إرسال إلى Digylog
+            </button>
+            {dispatchResult && (
+              <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-700">{dispatchResult}</span>
+            )}
           </div>
         </div>
       )}
