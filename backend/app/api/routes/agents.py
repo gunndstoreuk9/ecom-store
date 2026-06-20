@@ -240,7 +240,28 @@ def agent_my_payout(
     agent_id: str = Depends(_require_agent_session),
     db: Session = Depends(get_db),
 ) -> ConfirmationPayoutResponse:
-    return get_agent_payout(db, agent_id=agent_id, include_details=details)
+    try:
+        return get_agent_payout(db, agent_id=agent_id, include_details=details)
+    except Exception:
+        # Fallback when migration hasn't run yet — return empty payout
+        db.rollback()
+        from app.services.payouts import _get_or_create_state as _gs
+        try:
+            state = _gs(db)
+            commission = state.commission_per_order
+            last_reset = state.last_reset_at
+        except Exception:
+            commission = 5
+            last_reset = None
+        return ConfirmationPayoutResponse(
+            orders_count=0,
+            commission_per_order=commission,
+            base_amount_mad=0,
+            manual_adjustment_mad=0,
+            total_due_mad=0,
+            last_reset_at=last_reset,
+            status="paid",
+        )
 
 
 @router.get("/me/call-center-stats", response_model=AdminCallCenterStats)

@@ -102,8 +102,11 @@ def get_agent_payout(db: Session, *, agent_id: str, include_details: bool = Fals
     from uuid import UUID as _UUID
     aid = agent.id
 
-    # Use per-agent reset timestamp (falls back to global if not set)
-    agent_reset_at = agent.payout_last_reset_at or state.last_reset_at
+    # Use per-agent reset timestamp (falls back to global if column not yet migrated)
+    try:
+        agent_reset_at = agent.payout_last_reset_at or state.last_reset_at
+    except Exception:
+        agent_reset_at = state.last_reset_at
 
     base_q = db.query(Order).filter(
         Order.assigned_agent_id == aid,
