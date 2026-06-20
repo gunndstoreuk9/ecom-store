@@ -58,3 +58,8 @@ class AgentStatsResponse(BaseModel):
     pending_open: int
     confirmation_rate: float
     avg_response_minutes: Optional[float]
+    # Live queue counts
+    new_count: int = 0
+    follow_up_count: int = 0
+    confirmed_queue: int = 0
+    dispatched_count: int = 0

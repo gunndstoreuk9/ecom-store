@@ -33,7 +33,7 @@ from app.services.agents import (
     update_agent,
 )
 from app.services.admin import dispatch_orders, get_agent_call_center_stats, list_admin_orders, update_admin_order_call, update_admin_order_details, update_admin_order_status
-from app.services.payouts import get_agent_payout
+from app.services.payouts import PayoutPinError, get_agent_payout, reset_agent_payout
 from app.schemas.admin import AdminCallCenterStats, ConfirmationPayoutResponse, AdminDispatchRequest, AdminDispatchResponse, AdminOrderEditUpdate, AdminOrderListItem, AdminOrdersResponse, AdminOrderCallUpdate, AdminOrderStatusUpdate
 
 router = APIRouter(prefix="/agents", tags=["agents"])
@@ -171,6 +171,31 @@ def admin_delete_agent(agent_id: str, db: Session = Depends(get_db)) -> dict:
     if not ok:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Agent not found")
     return {"ok": True}
+
+
+@router.get("/{agent_id}/payout", response_model=ConfirmationPayoutResponse, dependencies=[Depends(require_admin_key)])
+def admin_agent_payout(
+    agent_id: str,
+    details: bool = Query(default=False),
+    db: Session = Depends(get_db),
+) -> ConfirmationPayoutResponse:
+    return get_agent_payout(db, agent_id=agent_id, include_details=details)
+
+
+@router.post("/{agent_id}/payout/reset", response_model=ConfirmationPayoutResponse, dependencies=[Depends(require_admin_key)])
+async def admin_reset_agent_payout(
+    agent_id: str,
+    request: Request,
+    db: Session = Depends(get_db),
+) -> ConfirmationPayoutResponse:
+    body = await request.json()
+    pin = body.get("pin", "")
+    try:
+        return reset_agent_payout(db, agent_id=agent_id, pin=pin)
+    except PayoutPinError as exc:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(exc))
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
 
 
 @router.get("/stats", response_model=list[AgentStatsResponse], dependencies=[Depends(require_admin_key)])

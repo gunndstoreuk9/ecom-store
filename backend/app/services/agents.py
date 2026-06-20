@@ -240,6 +240,26 @@ def get_agent_stats(db: Session, agent_id: str, *, days: int = 30) -> Optional[d
         Order.call_status.is_(None),
     ).scalar() or 0
 
+    # Bucket counts (current queue depth, not time-windowed)
+    new_count = db.query(func.count(Order.id)).filter(
+        Order.assigned_agent_id == agent.id,
+        Order.status == "new",
+    ).scalar() or 0
+    follow_up_count = db.query(func.count(Order.id)).filter(
+        Order.assigned_agent_id == agent.id,
+        Order.call_status == "follow_up",
+    ).scalar() or 0
+    confirmed_queue = db.query(func.count(Order.id)).filter(
+        Order.assigned_agent_id == agent.id,
+        Order.status == "confirmed",
+        Order.dispatched_at.is_(None),
+    ).scalar() or 0
+    dispatched_count = db.query(func.count(Order.id)).filter(
+        Order.assigned_agent_id == agent.id,
+        Order.dispatched_at.isnot(None),
+        Order.delivery_tracking.isnot(None),
+    ).scalar() or 0
+
     responded = db.query(Order).filter(
         Order.assigned_agent_id == agent.id,
         Order.first_response_at.isnot(None),
@@ -269,6 +289,11 @@ def get_agent_stats(db: Session, agent_id: str, *, days: int = 30) -> Optional[d
         "pending_open": pending,
         "confirmation_rate": round(confirmed / total * 100, 1) if total > 0 else 0.0,
         "avg_response_minutes": avg_response_minutes,
+        # Live queue counts
+        "new_count": new_count,
+        "follow_up_count": follow_up_count,
+        "confirmed_queue": confirmed_queue,
+        "dispatched_count": dispatched_count,
     }
 
 

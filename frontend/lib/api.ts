@@ -823,6 +823,10 @@ export interface AgentStats {
   pending_open: number;
   confirmation_rate: number;
   avg_response_minutes: number | null;
+  new_count: number;
+  follow_up_count: number;
+  confirmed_queue: number;
+  dispatched_count: number;
 }
 
 export interface AgentCreatePayload {
@@ -875,6 +879,20 @@ export async function adminDeleteAgent(adminKey: string, agentId: string): Promi
   await api<{ ok: boolean }>(`/v1/agents/${agentId}`, {
     method: "DELETE",
     headers: { "X-Admin-Key": adminKey },
+  });
+}
+
+export async function adminGetAgentPayout(adminKey: string, agentId: string, details = false): Promise<ConfirmationPayout> {
+  return api<ConfirmationPayout>(`/v1/agents/${agentId}/payout${details ? "?details=true" : ""}`, {
+    headers: { "X-Admin-Key": adminKey },
+  });
+}
+
+export async function adminResetAgentPayout(adminKey: string, agentId: string, pin: string): Promise<ConfirmationPayout> {
+  return api<ConfirmationPayout>(`/v1/agents/${agentId}/payout/reset`, {
+    method: "POST",
+    headers: { "X-Admin-Key": adminKey },
+    body: JSON.stringify({ pin }),
   });
 }
 

@@ -81,18 +81,40 @@ def get_payout(db: Session, *, include_details: bool = False) -> ConfirmationPay
     )
 
 
-def get_agent_payout(db: Session, *, agent_id: str, include_details: bool = False) -> ConfirmationPayoutResponse:
-    """Personal payout for a single agent – read-only, no editing/reset."""
+def _get_agent_obj(db: Session, agent_id: str):
     from uuid import UUID as _UUID
+    from app.models.agent import Agent as _Agent
     try:
-        aid = _UUID(agent_id)
+        return db.get(_Agent, _UUID(agent_id))
     except ValueError:
+        return None
+
+
+def get_agent_payout(db: Session, *, agent_id: str, include_details: bool = False) -> ConfirmationPayoutResponse:
+    """Personal payout for a single agent, using per-agent reset timestamp."""
+    agent = _get_agent_obj(db, agent_id)
+    if agent is None:
         return ConfirmationPayoutResponse(
             orders_count=0, commission_per_order=5, base_amount_mad=0,
             manual_adjustment_mad=0, total_due_mad=0, last_reset_at=None, status="paid",
         )
     state = _get_or_create_state(db)
-    base_query = _eligible_query(db, state).filter(Order.assigned_agent_id == aid)
+    from uuid import UUID as _UUID
+    aid = agent.id
+
+    # Use per-agent reset timestamp (falls back to global if not set)
+    agent_reset_at = agent.payout_last_reset_at or state.last_reset_at
+
+    base_q = db.query(Order).filter(
+        Order.assigned_agent_id == aid,
+        Order.dispatched_at.isnot(None),
+        Order.delivery_tracking.isnot(None),
+        Order.delivery_error.is_(None),
+    )
+    if agent_reset_at is not None:
+        base_q = base_q.filter(Order.dispatched_at > agent_reset_at)
+
+    base_query = base_q
 
     orders_count = base_query.with_entities(func.count(Order.id)).scalar() or 0
     base_amount = orders_count * state.commission_per_order
@@ -119,10 +141,27 @@ def get_agent_payout(db: Session, *, agent_id: str, include_details: bool = Fals
         base_amount_mad=base_amount,
         manual_adjustment_mad=0,
         total_due_mad=total_due,
-        last_reset_at=state.last_reset_at,
+        last_reset_at=agent_reset_at,
         status="unpaid" if total_due > 0 else "paid",
         details=details,
     )
+
+
+def reset_agent_payout(db: Session, *, agent_id: str, pin: str) -> ConfirmationPayoutResponse:
+    """Reset payout for a single agent using admin PIN."""
+    expected = get_settings().admin_reset_pin.strip()
+    if not expected:
+        raise PayoutPinError("Reset PIN is not configured (set ADMIN_RESET_PIN)")
+    if not pin or not compare_digest(pin.strip(), expected):
+        raise PayoutPinError("Invalid admin PIN")
+
+    agent = _get_agent_obj(db, agent_id)
+    if agent is None:
+        raise ValueError("Agent not found")
+
+    agent.payout_last_reset_at = datetime.now(timezone.utc)
+    db.commit()
+    return get_agent_payout(db, agent_id=agent_id)
 
 
 def update_payout(
