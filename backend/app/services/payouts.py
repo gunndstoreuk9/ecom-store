@@ -105,17 +105,33 @@ def get_agent_payout(db: Session, *, agent_id: str, include_details: bool = Fals
     # Use global reset timestamp until per-agent migration is applied
     agent_reset_at = state.last_reset_at
 
-    base_q = db.query(Order).filter(
-        Order.assigned_agent_id == aid,
-        Order.dispatched_at.isnot(None),
-        Order.delivery_tracking.isnot(None),
-        Order.delivery_error.is_(None),
-    )
-    if agent_reset_at is not None:
-        base_q = base_q.filter(Order.dispatched_at > agent_reset_at)
+    def _dispatched_q(agent_id):
+        q = db.query(Order).filter(
+            Order.assigned_agent_id == agent_id,
+            Order.dispatched_at.isnot(None),
+            Order.delivery_tracking.isnot(None),
+            Order.delivery_error.is_(None),
+        )
+        if agent_reset_at is not None:
+            q = q.filter(Order.dispatched_at > agent_reset_at)
+        return q
 
-    base_query = base_q
+    # Auto-assign unassigned dispatched orders on first payout query
+    assigned_count = _dispatched_q(aid).with_entities(func.count(Order.id)).scalar() or 0
+    if assigned_count == 0:
+        unassigned = db.query(func.count(Order.id)).filter(
+            Order.assigned_agent_id.is_(None),
+            Order.dispatched_at.isnot(None),
+            Order.delivery_tracking.isnot(None),
+            Order.delivery_error.is_(None),
+        ).scalar() or 0
+        if unassigned > 0:
+            db.query(Order).filter(
+                Order.assigned_agent_id.is_(None),
+            ).update({"assigned_agent_id": aid}, synchronize_session=False)
+            db.commit()
 
+    base_query = _dispatched_q(aid)
     orders_count = base_query.with_entities(func.count(Order.id)).scalar() or 0
     base_amount = orders_count * state.commission_per_order
     total_due = base_amount  # no manual adjustment for individual agents
