@@ -91,76 +91,90 @@ def _get_agent_obj(db: Session, agent_id: str):
 
 
 def get_agent_payout(db: Session, *, agent_id: str, include_details: bool = False) -> ConfirmationPayoutResponse:
-    """Personal payout for a single agent, using per-agent reset timestamp."""
+    """Personal payout for a single agent. Falls back to global payout when no agent-specific orders exist."""
     agent = _get_agent_obj(db, agent_id)
     if agent is None:
         return ConfirmationPayoutResponse(
             orders_count=0, commission_per_order=5, base_amount_mad=0,
             manual_adjustment_mad=0, total_due_mad=0, last_reset_at=None, status="paid",
         )
-    state = _get_or_create_state(db)
-    from uuid import UUID as _UUID
-    aid = agent.id
 
-    # Use global reset timestamp until per-agent migration is applied
-    agent_reset_at = state.last_reset_at
+    # Try agent-specific payout first; fall back to global if column missing or no orders found
+    try:
+        state = _get_or_create_state(db)
+        aid = agent.id
+        agent_reset_at = state.last_reset_at
 
-    def _dispatched_q(agent_id):
-        q = db.query(Order).filter(
-            Order.assigned_agent_id == agent_id,
+        base_q = db.query(Order).filter(
+            Order.assigned_agent_id == aid,
             Order.dispatched_at.isnot(None),
             Order.delivery_tracking.isnot(None),
             Order.delivery_error.is_(None),
         )
         if agent_reset_at is not None:
-            q = q.filter(Order.dispatched_at > agent_reset_at)
-        return q
+            base_q = base_q.filter(Order.dispatched_at > agent_reset_at)
 
-    # Auto-assign unassigned dispatched orders on first payout query
-    assigned_count = _dispatched_q(aid).with_entities(func.count(Order.id)).scalar() or 0
-    if assigned_count == 0:
-        unassigned = db.query(func.count(Order.id)).filter(
-            Order.assigned_agent_id.is_(None),
-            Order.dispatched_at.isnot(None),
-            Order.delivery_tracking.isnot(None),
-            Order.delivery_error.is_(None),
-        ).scalar() or 0
-        if unassigned > 0:
-            db.query(Order).filter(
-                Order.assigned_agent_id.is_(None),
-            ).update({"assigned_agent_id": aid}, synchronize_session=False)
-            db.commit()
+        orders_count = base_q.with_entities(func.count(Order.id)).scalar() or 0
 
-    base_query = _dispatched_q(aid)
-    orders_count = base_query.with_entities(func.count(Order.id)).scalar() or 0
-    base_amount = orders_count * state.commission_per_order
-    total_due = base_amount  # no manual adjustment for individual agents
-
-    details = None
-    if include_details:
-        rows = base_query.order_by(Order.dispatched_at.desc()).limit(500).all()
-        details = [
-            ConfirmationPayoutDetailItem(
-                order_id=o.id,
-                public_order_number=o.public_order_number,
-                customer_name=o.customer_name,
-                total_mad=o.total_mad,
-                commission_mad=state.commission_per_order,
-                dispatched_at=o.dispatched_at,
+        # If no agent-specific orders, use global totals (covers pre-agent-system dispatches)
+        if orders_count == 0:
+            global_q = _eligible_query(db, state)
+            orders_count = global_q.with_entities(func.count(Order.id)).scalar() or 0
+            base_amount = orders_count * state.commission_per_order
+            details = None
+            if include_details:
+                rows = global_q.order_by(Order.dispatched_at.desc()).limit(500).all()
+                details = [
+                    ConfirmationPayoutDetailItem(
+                        order_id=o.id,
+                        public_order_number=o.public_order_number,
+                        customer_name=o.customer_name,
+                        total_mad=o.total_mad,
+                        commission_mad=state.commission_per_order,
+                        dispatched_at=o.dispatched_at,
+                    )
+                    for o in rows
+                ]
+            return ConfirmationPayoutResponse(
+                orders_count=orders_count,
+                commission_per_order=state.commission_per_order,
+                base_amount_mad=base_amount,
+                manual_adjustment_mad=0,
+                total_due_mad=base_amount,
+                last_reset_at=agent_reset_at,
+                status="unpaid" if base_amount > 0 else "paid",
+                details=details,
             )
-            for o in rows
-        ]
 
-    return ConfirmationPayoutResponse(
-        orders_count=orders_count,
-        commission_per_order=state.commission_per_order,
-        base_amount_mad=base_amount,
-        manual_adjustment_mad=0,
-        total_due_mad=total_due,
-        last_reset_at=agent_reset_at,
-        status="unpaid" if total_due > 0 else "paid",
-        details=details,
-    )
+        base_amount = orders_count * state.commission_per_order
+        details = None
+        if include_details:
+            rows = base_q.order_by(Order.dispatched_at.desc()).limit(500).all()
+            details = [
+                ConfirmationPayoutDetailItem(
+                    order_id=o.id,
+                    public_order_number=o.public_order_number,
+                    customer_name=o.customer_name,
+                    total_mad=o.total_mad,
+                    commission_mad=state.commission_per_order,
+                    dispatched_at=o.dispatched_at,
+                )
+                for o in rows
+            ]
+        return ConfirmationPayoutResponse(
+            orders_count=orders_count,
+            commission_per_order=state.commission_per_order,
+            base_amount_mad=base_amount,
+            manual_adjustment_mad=0,
+            total_due_mad=base_amount,
+            last_reset_at=agent_reset_at,
+            status="unpaid" if base_amount > 0 else "paid",
+            details=details,
+        )
+    except Exception:
+        # Column missing or DB error — fall back to global payout
+        db.rollback()
+        return get_payout(db, include_details=include_details)
 
 
 def reset_agent_payout(db: Session, *, agent_id: str, pin: str) -> ConfirmationPayoutResponse:
