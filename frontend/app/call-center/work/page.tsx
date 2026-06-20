@@ -195,16 +195,10 @@ export default function AgentWorkspacePage() {
   }
 
   async function loadStats(token: string) {
-    try {
-      const [basic, detailed, pay] = await Promise.all([
-        getAgentMe(token),
-        getAgentCallCenterStats(token, selectedProductSku),
-        getAgentPayout(token),
-      ]);
-      setMyStats(basic);
-      setDetailedStats(detailed);
-      setPayout(pay);
-    } catch { /* non-blocking */ }
+    // Load each independently so one failure doesn't hide the others
+    getAgentMe(token).then(setMyStats).catch(() => { /* non-blocking */ });
+    getAgentCallCenterStats(token, selectedProductSku).then(setDetailedStats).catch(() => { /* non-blocking */ });
+    getAgentPayout(token).then(setPayout).catch(() => { /* non-blocking */ });
   }
 
   function onSaved(updated: AdminOrder) {
