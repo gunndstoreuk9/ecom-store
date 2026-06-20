@@ -5,7 +5,7 @@ import Link from "next/link";
 import {
   ArrowLeft, BarChart3, Eye, EyeOff, ListChecks, Lock,
   Pencil, Plus, RefreshCw, RotateCcw, ShieldCheck, ShieldOff,
-  Trash2, Wallet,
+  Trash2, Wallet, History,
 } from "lucide-react";
 import {
   AgentResponse,
@@ -19,6 +19,7 @@ import {
   adminGetAllAgentStats,
   adminGetAgentPayout,
   adminResetAgentPayout,
+  adminAssignHistoricalOrders,
 } from "@/lib/api";
 import { formatMad } from "@/lib/currency";
 
@@ -61,6 +62,7 @@ export default function AgentsAdminPage() {
   const [fSaving, setFSaving] = useState(false);
   const [fError, setFError] = useState<string | null>(null);
   const [showPass, setShowPass] = useState(false);
+  const [assigningId, setAssigningId] = useState<string | null>(null);
 
   useEffect(() => {
     const k = localStorage.getItem(ADMIN_KEY_STORAGE) || "";
@@ -270,6 +272,28 @@ export default function AgentsAdminPage() {
                             </button>
                             <button onClick={() => setModal({ type: "payout", agent })} className="text-amber-400 hover:text-amber-300 transition p-1.5 rounded-lg hover:bg-amber-900/20" title="المستحقات">
                               <Wallet className="w-4 h-4" />
+                            </button>
+                            <button
+                              title="تحويل الطلبات القديمة غير المسندة لهذه الموظفة"
+                              disabled={assigningId === agent.id}
+                              onClick={async () => {
+                                if (!confirm(`تحويل كل الطلبات غير المسندة لـ ${agent.display_name}؟`)) return;
+                                setAssigningId(agent.id);
+                                try {
+                                  const r = await adminAssignHistoricalOrders(savedKey, agent.id);
+                                  alert(`✅ تم تحويل ${r.updated_orders} طلب لـ ${agent.display_name}`);
+                                  void load(savedKey);
+                                } catch (e) {
+                                  alert("خطأ: " + errMsg(e));
+                                } finally {
+                                  setAssigningId(null);
+                                }
+                              }}
+                              className="text-sky-400 hover:text-sky-300 transition p-1.5 rounded-lg hover:bg-sky-900/20 disabled:opacity-40"
+                            >
+                              {assigningId === agent.id
+                                ? <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-sky-400/30 border-t-sky-400" />
+                                : <History className="w-4 h-4" />}
                             </button>
                             <button onClick={() => { setFError(null); setModal({ type: "delete", agent }); }} className="text-slate-400 hover:text-rose-400 transition p-1.5 rounded-lg hover:bg-rose-900/20" title="حذف">
                               <Trash2 className="w-4 h-4" />

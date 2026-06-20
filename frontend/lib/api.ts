@@ -896,6 +896,13 @@ export async function adminResetAgentPayout(adminKey: string, agentId: string, p
   });
 }
 
+export async function adminAssignHistoricalOrders(adminKey: string, agentId: string): Promise<{ ok: boolean; updated_orders: number }> {
+  return api<{ ok: boolean; updated_orders: number }>(`/v1/agents/${agentId}/assign-historical-orders`, {
+    method: "POST",
+    headers: { "X-Admin-Key": adminKey },
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Agents (self-service: agent token auth)
 // ---------------------------------------------------------------------------

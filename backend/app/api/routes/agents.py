@@ -173,6 +173,31 @@ def admin_delete_agent(agent_id: str, db: Session = Depends(get_db)) -> dict:
     return {"ok": True}
 
 
+@router.post("/{agent_id}/assign-historical-orders", dependencies=[Depends(require_admin_key)])
+def admin_assign_historical_orders(
+    agent_id: str,
+    db: Session = Depends(get_db),
+) -> dict:
+    """Assign all orders that have no assigned agent to this agent (for historical migration)."""
+    from uuid import UUID as _UUID
+    from app.models.agent import Agent as _Agent
+    from app.models.order import Order as _Order
+    try:
+        aid = _UUID(agent_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid agent_id")
+    agent = db.get(_Agent, aid)
+    if not agent:
+        raise HTTPException(status_code=404, detail="Agent not found")
+    updated = (
+        db.query(_Order)
+        .filter(_Order.assigned_agent_id.is_(None))
+        .update({"assigned_agent_id": aid}, synchronize_session=False)
+    )
+    db.commit()
+    return {"ok": True, "updated_orders": updated}
+
+
 @router.get("/{agent_id}/payout", response_model=ConfirmationPayoutResponse, dependencies=[Depends(require_admin_key)])
 def admin_agent_payout(
     agent_id: str,
