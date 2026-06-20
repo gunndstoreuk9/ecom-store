@@ -33,7 +33,8 @@ from app.services.agents import (
     update_agent,
 )
 from app.services.admin import dispatch_orders, get_agent_call_center_stats, list_admin_orders, update_admin_order_call, update_admin_order_details, update_admin_order_status
-from app.schemas.admin import AdminCallCenterStats, AdminDispatchRequest, AdminDispatchResponse, AdminOrderEditUpdate, AdminOrderListItem, AdminOrdersResponse, AdminOrderCallUpdate, AdminOrderStatusUpdate
+from app.services.payouts import get_agent_payout
+from app.schemas.admin import AdminCallCenterStats, ConfirmationPayoutResponse, AdminDispatchRequest, AdminDispatchResponse, AdminOrderEditUpdate, AdminOrderListItem, AdminOrdersResponse, AdminOrderCallUpdate, AdminOrderStatusUpdate
 
 router = APIRouter(prefix="/agents", tags=["agents"])
 
@@ -206,6 +207,15 @@ def agent_me(
     if not stats:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Agent not found")
     return AgentStatsResponse(**stats)
+
+
+@router.get("/me/payout", response_model=ConfirmationPayoutResponse)
+def agent_my_payout(
+    details: bool = Query(default=False),
+    agent_id: str = Depends(_require_agent_session),
+    db: Session = Depends(get_db),
+) -> ConfirmationPayoutResponse:
+    return get_agent_payout(db, agent_id=agent_id, include_details=details)
 
 
 @router.get("/me/call-center-stats", response_model=AdminCallCenterStats)

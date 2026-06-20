@@ -81,6 +81,50 @@ def get_payout(db: Session, *, include_details: bool = False) -> ConfirmationPay
     )
 
 
+def get_agent_payout(db: Session, *, agent_id: str, include_details: bool = False) -> ConfirmationPayoutResponse:
+    """Personal payout for a single agent – read-only, no editing/reset."""
+    from uuid import UUID as _UUID
+    try:
+        aid = _UUID(agent_id)
+    except ValueError:
+        return ConfirmationPayoutResponse(
+            orders_count=0, commission_per_order=5, base_amount_mad=0,
+            manual_adjustment_mad=0, total_due_mad=0, last_reset_at=None, status="paid",
+        )
+    state = _get_or_create_state(db)
+    base_query = _eligible_query(db, state).filter(Order.assigned_agent_id == aid)
+
+    orders_count = base_query.with_entities(func.count(Order.id)).scalar() or 0
+    base_amount = orders_count * state.commission_per_order
+    total_due = base_amount  # no manual adjustment for individual agents
+
+    details = None
+    if include_details:
+        rows = base_query.order_by(Order.dispatched_at.desc()).limit(500).all()
+        details = [
+            ConfirmationPayoutDetailItem(
+                order_id=o.id,
+                public_order_number=o.public_order_number,
+                customer_name=o.customer_name,
+                total_mad=o.total_mad,
+                commission_mad=state.commission_per_order,
+                dispatched_at=o.dispatched_at,
+            )
+            for o in rows
+        ]
+
+    return ConfirmationPayoutResponse(
+        orders_count=orders_count,
+        commission_per_order=state.commission_per_order,
+        base_amount_mad=base_amount,
+        manual_adjustment_mad=0,
+        total_due_mad=total_due,
+        last_reset_at=state.last_reset_at,
+        status="unpaid" if total_due > 0 else "paid",
+        details=details,
+    )
+
+
 def update_payout(
     db: Session,
     *,

@@ -2,13 +2,14 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { BarChart3, Download, LogOut, Phone, RefreshCw, Send, Truck } from "lucide-react";
+import { BarChart3, Download, ListChecks, LogOut, Phone, RefreshCw, Send, Truck, Wallet } from "lucide-react";
 import {
   AdminCallCenterStats,
   AdminOrder,
   AgentSession,
   AgentStats,
   ApiError,
+  ConfirmationPayout,
   agentDispatchOrders,
   agentEditOrder,
   agentLogout,
@@ -16,6 +17,7 @@ import {
   getAgentCallCenterStats,
   getAgentMe,
   getAgentOrders,
+  getAgentPayout,
 } from "@/lib/api";
 import { formatMad } from "@/lib/currency";
 import { isValidMoroccoMobile, toE164MoroccoPhone } from "@/lib/phone";
@@ -105,6 +107,8 @@ export default function AgentWorkspacePage() {
   const [session, setSession] = useState<AgentSession | null>(null);
   const [myStats, setMyStats] = useState<AgentStats | null>(null);
   const [detailedStats, setDetailedStats] = useState<AdminCallCenterStats | null>(null);
+  const [payout, setPayout] = useState<ConfirmationPayout | null>(null);
+  const [payoutVersion, setPayoutVersion] = useState(0);
   const [orders, setOrders] = useState<AdminOrder[]>([]);
   const [counts, setCounts] = useState({ new: 0, follow_up: 0, confirmed: 0, blacklist: 0 });
   const [productCounts, setProductCounts] = useState<Record<ProductFilter, number>>({ all: 0, "american-sugar-balance-complex": 0, "miracle-men-oil": 0 });
@@ -192,12 +196,14 @@ export default function AgentWorkspacePage() {
 
   async function loadStats(token: string) {
     try {
-      const [basic, detailed] = await Promise.all([
+      const [basic, detailed, pay] = await Promise.all([
         getAgentMe(token),
         getAgentCallCenterStats(token, selectedProductSku),
+        getAgentPayout(token),
       ]);
       setMyStats(basic);
       setDetailedStats(detailed);
+      setPayout(pay);
     } catch { /* non-blocking */ }
   }
 
@@ -264,6 +270,7 @@ export default function AgentWorkspacePage() {
       setSelected(new Set());
       void loadCounts(session.token);
       void loadStats(session.token);
+      setPayoutVersion((v) => v + 1);
       const succeeded = res.orders.filter((o) => !o.delivery_error).length;
       const failed = res.orders.filter((o) => o.delivery_error).length;
       setDispatchResult(failed > 0 ? `✓ ${succeeded} تم الإرسال · ✗ ${failed} فشل` : `✓ تم إرسال ${succeeded} طلب إلى Digylog`);
@@ -324,6 +331,9 @@ export default function AgentWorkspacePage() {
           </div>
         </div>
       </header>
+
+      {/* Payout Panel */}
+      {payout && <AgentPayoutPanel token={session.token} payout={payout} onPayoutChange={setPayout} version={payoutVersion} />}
 
       {/* Stats Panel */}
       {showStats && (myStats || detailedStats) && (
@@ -532,6 +542,120 @@ export default function AgentWorkspacePage() {
         ) : null}
       </main>
     </section>
+  );
+}
+
+function AgentPayoutPanel({
+  token,
+  payout,
+  onPayoutChange,
+  version,
+}: {
+  token: string;
+  payout: ConfirmationPayout;
+  onPayoutChange: (p: ConfirmationPayout) => void;
+  version: number;
+}) {
+  const [showDetails, setShowDetails] = useState(false);
+  const [details, setDetails] = useState<ConfirmationPayout["details"]>(null);
+  const [error, setError] = useState<string | null>(null);
+  const isPaid = payout.status === "paid";
+  const lastReset = payout.last_reset_at ? payout.last_reset_at.slice(0, 10) : "—";
+
+  // Refresh payout whenever version bumps (after dispatch)
+  useEffect(() => {
+    if (!token) return;
+    getAgentPayout(token).then(onPayoutChange).catch(() => { /* non-blocking */ });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [version]);
+
+  async function toggleDetails() {
+    const next = !showDetails;
+    setShowDetails(next);
+    if (next && !details) {
+      try {
+        const d = await getAgentPayout(token, true);
+        setDetails(d.details ?? []);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "خطأ");
+      }
+    }
+  }
+
+  return (
+    <div className="border-b border-[#11233c] bg-gradient-to-l from-[#0B1724] to-[#12325f] text-white">
+      <div className="mx-auto max-w-[1280px] px-4 py-4 sm:px-6">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <Wallet className="h-5 w-5 text-amber-300" />
+            <h2 className="text-base font-black">مستحقاتي</h2>
+          </div>
+          <span className={`rounded-full px-3 py-1 text-xs font-black ${isPaid ? "bg-emerald-500/20 text-emerald-300" : "bg-amber-500/20 text-amber-300"}`}>
+            {isPaid ? "مدفوع" : "غير مدفوع"}
+          </span>
+        </div>
+
+        <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
+          <div className="rounded-2xl bg-white/10 p-3">
+            <p className="text-[10px] font-black uppercase tracking-wide text-white/60">طلبات مؤكدة ومرسلة</p>
+            <p className="mt-1 text-2xl font-black">{payout.orders_count.toLocaleString()}</p>
+          </div>
+          <div className="rounded-2xl bg-white/10 p-3">
+            <p className="text-[10px] font-black uppercase tracking-wide text-white/60">العمولة / طلب</p>
+            <p className="mt-1 text-2xl font-black">{payout.commission_per_order} <span className="text-sm">MAD</span></p>
+          </div>
+          <div className="rounded-2xl bg-amber-400/15 p-3 ring-1 ring-amber-300/30 sm:col-span-1 col-span-2">
+            <p className="text-[10px] font-black uppercase tracking-wide text-amber-200">المجموع المستحق</p>
+            <p className="mt-1 text-2xl font-black text-amber-300">{formatMad(payout.total_due_mad)}</p>
+          </div>
+        </div>
+
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <span className="text-xs font-bold text-white/60">
+            آخر تصفية: <span className="font-black text-white/90">{lastReset}</span>
+          </span>
+          <button
+            onClick={() => void toggleDetails()}
+            className="ms-auto flex items-center gap-1.5 rounded-full bg-white/15 px-4 py-1.5 text-xs font-black hover:bg-white/25"
+          >
+            <ListChecks className="h-3.5 w-3.5" />
+            تفاصيل الحساب
+          </button>
+        </div>
+
+        {error ? <p className="mt-2 rounded-xl bg-rose-500/20 px-3 py-2 text-xs font-bold text-rose-200">{error}</p> : null}
+
+        {showDetails && (
+          <div className="mt-3 max-h-64 overflow-auto rounded-2xl bg-white/5">
+            <table className="w-full text-xs">
+              <thead className="sticky top-0 bg-[#0B1724] text-white/60">
+                <tr>
+                  <th className="px-3 py-2 text-start font-black">الطلب</th>
+                  <th className="px-3 py-2 text-start font-black">الزبون</th>
+                  <th className="px-3 py-2 text-start font-black">أُرسل</th>
+                  <th className="px-3 py-2 text-end font-black">العمولة</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(details ?? []).map((d) => (
+                  <tr key={String(d.order_id)} className="border-t border-white/10">
+                    <td className="px-3 py-2 font-bold">{d.public_order_number}</td>
+                    <td className="px-3 py-2">{d.customer_name}</td>
+                    <td className="px-3 py-2 text-white/70">{d.dispatched_at ? String(d.dispatched_at).slice(0, 10) : "—"}</td>
+                    <td className="px-3 py-2 text-end font-black text-amber-300">{d.commission_mad} MAD</td>
+                  </tr>
+                ))}
+                {details && !details.length ? (
+                  <tr>
+                    <td colSpan={4} className="px-3 py-4 text-center text-white/60">ماكاين حتى طلب من آخر تصفية.</td>
+                  </tr>
+                ) : null}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
 

@@ -950,6 +950,12 @@ export async function agentEditOrder(token: string, orderId: string, payload: Ad
   });
 }
 
+export async function getAgentPayout(token: string, details = false): Promise<ConfirmationPayout> {
+  return api<ConfirmationPayout>(`/v1/agents/me/payout${details ? "?details=true" : ""}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
 export async function getAgentCallCenterStats(token: string, productSku?: string): Promise<AdminCallCenterStats> {
   const search = new URLSearchParams();
   if (productSku) search.set("product_sku", productSku);
