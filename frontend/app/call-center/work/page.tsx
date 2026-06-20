@@ -2,8 +2,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { BarChart3, Download, LogOut, Phone, RefreshCw } from "lucide-react";
+import { BarChart3, Download, LogOut, Phone, RefreshCw, Send, Truck } from "lucide-react";
 import {
+  AdminCallCenterStats,
   AdminOrder,
   AgentSession,
   AgentStats,
@@ -12,10 +13,12 @@ import {
   agentEditOrder,
   agentLogout,
   agentUpdateOrderCall,
+  getAgentCallCenterStats,
   getAgentMe,
   getAgentOrders,
 } from "@/lib/api";
 import { formatMad } from "@/lib/currency";
+import { isValidMoroccoMobile, toE164MoroccoPhone } from "@/lib/phone";
 import { DELIVERY_COMPANY, DIGYLOG_CITIES, cleanCityName } from "@/config/digylog";
 import { HERO_OFFERS } from "@/config/offers";
 
@@ -33,13 +36,14 @@ const CALL_STATUSES = [
 
 const CALL_VALUE_TO_API: Record<string, string> = { annule: "cancelled" };
 
-type TabValue = "new" | "follow_up" | "confirmed" | "all";
+type TabValue = "new" | "follow_up" | "confirmed" | "blacklist" | "all";
 type ProductFilter = "all" | "american-sugar-balance-complex" | "miracle-men-oil";
 
 const TABS: { value: TabValue; ar: string }[] = [
   { value: "new", ar: "طلبات جديدة" },
   { value: "follow_up", ar: "للمتابعة" },
   { value: "confirmed", ar: "للإرسال" },
+  { value: "blacklist", ar: "Blacklist" },
   { value: "all", ar: "الكل" },
 ];
 
@@ -48,6 +52,12 @@ const PRODUCT_FILTERS: { value: ProductFilter; ar: string; shortAr: string }[] =
   { value: "american-sugar-balance-complex", ar: "المركّب الأمريكي لضبط السكر", shortAr: "ضبط السكر" },
   { value: "miracle-men-oil", ar: "الدهان الأمريكي المعجزة للرجال", shortAr: "دهان الرجال" },
 ];
+
+const PERIOD_AR: Record<string, string> = {
+  today: "اليوم", yesterday: "البارح", last_7_days: "7 أيام",
+  last_15_days: "15 يوم", last_30_days: "30 يوم",
+  last_month: "الشهر الماضي", last_90_days: "90 يوم",
+};
 
 function matchCity(value?: string | null): string {
   if (!value) return "";
@@ -59,6 +69,23 @@ function displayProductName(order: AdminOrder): string {
   if (order.hero_sku === "miracle-men-oil") return "الدهان الأمريكي المعجزة للرجال";
   if (order.hero_sku === "american-sugar-balance-complex") return "المركّب الأمريكي لضبط السكر";
   return order.items?.[0]?.name_ar ?? order.hero_sku;
+}
+
+function isBlacklisted(order: AdminOrder): boolean {
+  const msg = (order.delivery_error || "").toLowerCase();
+  return msg.includes("liste noire") || msg.includes("blacklist");
+}
+
+function formatDeliveryError(message: string, order: AdminOrder): string {
+  const lower = message.toLowerCase();
+  if (lower.includes("liste noire") || lower.includes("blacklist")) {
+    const phone = order.phone_local || order.phone_e164;
+    return `هذا الرقم موجود في القائمة السوداء لدى Digylog: ${phone}`;
+  }
+  if (lower.includes("returned no tracking reference")) {
+    return "قبلت Digylog الطلب ولكن لم ترجع رقم تتبع. راجع الطلب داخل منصة Digylog.";
+  }
+  return message;
 }
 
 function errMsg(err: unknown): string {
@@ -77,8 +104,9 @@ export default function AgentWorkspacePage() {
   const router = useRouter();
   const [session, setSession] = useState<AgentSession | null>(null);
   const [myStats, setMyStats] = useState<AgentStats | null>(null);
+  const [detailedStats, setDetailedStats] = useState<AdminCallCenterStats | null>(null);
   const [orders, setOrders] = useState<AdminOrder[]>([]);
-  const [counts, setCounts] = useState({ new: 0, follow_up: 0, confirmed: 0 });
+  const [counts, setCounts] = useState({ new: 0, follow_up: 0, confirmed: 0, blacklist: 0 });
   const [productCounts, setProductCounts] = useState<Record<ProductFilter, number>>({ all: 0, "american-sugar-balance-complex": 0, "miracle-men-oil": 0 });
   const [tab, setTab] = useState<TabValue>("new");
   const [productFilter, setProductFilter] = useState<ProductFilter>("all");
@@ -120,10 +148,13 @@ export default function AgentWorkspacePage() {
     setLoading(true); setError(null);
     try {
       const bucket = tab !== "all" ? tab : undefined;
-      const result = await getAgentOrders(token, { limit: 200, q: query, bucket, ...(selectedProductSku ? { status: undefined } : {}) });
-      // client-side product filter if needed
-      const filtered = selectedProductSku ? result.orders.filter((o) => o.hero_sku === selectedProductSku) : result.orders;
-      setOrders(filtered);
+      const result = await getAgentOrders(token, {
+        limit: 200,
+        q: query,
+        bucket,
+        ...(selectedProductSku ? { product_sku: selectedProductSku } : {}),
+      });
+      setOrders(result.orders);
     } catch (e) {
       if (e instanceof ApiError && e.status === 401) { handleLogout(); return; }
       setError(errMsg(e));
@@ -132,36 +163,51 @@ export default function AgentWorkspacePage() {
 
   async function loadCounts(token: string) {
     try {
-      const [n, f, c] = await Promise.all([
-        getAgentOrders(token, { limit: 1, bucket: "new" }),
-        getAgentOrders(token, { limit: 1, bucket: "follow_up" }),
-        getAgentOrders(token, { limit: 1, bucket: "confirmed" }),
+      const sku = selectedProductSku;
+      const [n, f, c, b] = await Promise.all([
+        getAgentOrders(token, { limit: 1, bucket: "new", ...(sku ? { product_sku: sku } : {}) }),
+        getAgentOrders(token, { limit: 1, bucket: "follow_up", ...(sku ? { product_sku: sku } : {}) }),
+        getAgentOrders(token, { limit: 1, bucket: "confirmed", ...(sku ? { product_sku: sku } : {}) }),
+        getAgentOrders(token, { limit: 1, bucket: "blacklist", ...(sku ? { product_sku: sku } : {}) }),
       ]);
-      setCounts({ new: n.total, follow_up: f.total, confirmed: c.total });
+      setCounts({ new: n.total, follow_up: f.total, confirmed: c.total, blacklist: b.total });
     } catch { /* non-blocking */ }
   }
 
   async function loadProductCounts(token: string) {
     try {
       const bucket = tab !== "all" ? tab : undefined;
-      const all = await getAgentOrders(token, { limit: 200, bucket });
-      const cnt: Record<ProductFilter, number> = { all: all.total, "american-sugar-balance-complex": 0, "miracle-men-oil": 0 };
-      for (const o of all.orders) {
-        if (o.hero_sku === "american-sugar-balance-complex") cnt["american-sugar-balance-complex"]++;
-        if (o.hero_sku === "miracle-men-oil") cnt["miracle-men-oil"]++;
-      }
-      setProductCounts(cnt);
+      const entries = await Promise.all(
+        PRODUCT_FILTERS.map(async (item) => {
+          const params: Record<string, unknown> = { limit: 1 };
+          if (bucket) params.bucket = bucket;
+          if (item.value !== "all") params.product_sku = item.value;
+          const result = await getAgentOrders(token, params as Parameters<typeof getAgentOrders>[1]);
+          return [item.value, result.total] as const;
+        })
+      );
+      setProductCounts(Object.fromEntries(entries) as Record<ProductFilter, number>);
     } catch { /* non-blocking */ }
   }
 
   async function loadStats(token: string) {
-    try { setMyStats(await getAgentMe(token)); } catch { /* non-blocking */ }
+    try {
+      const [basic, detailed] = await Promise.all([
+        getAgentMe(token),
+        getAgentCallCenterStats(token, selectedProductSku),
+      ]);
+      setMyStats(basic);
+      setDetailedStats(detailed);
+    } catch { /* non-blocking */ }
   }
 
   function onSaved(updated: AdminOrder) {
     if (session) { void loadCounts(session.token); void loadProductCounts(session.token); void loadStats(session.token); }
     setOrders((cur) => {
       if ((tab === "new" || tab === "follow_up") && updated.status !== "new") {
+        return cur.filter((o) => o.id !== updated.id);
+      }
+      if (tab === "blacklist" && !isBlacklisted(updated)) {
         return cur.filter((o) => o.id !== updated.id);
       }
       return cur.map((o) => (o.id === updated.id ? updated : o));
@@ -197,19 +243,30 @@ export default function AgentWorkspacePage() {
 
   async function handleDispatch() {
     if (!session) return;
-    const ids = selected.size > 0 ? Array.from(selected) : orders.map((o) => o.id);
+    const ids = orders.filter((o) => selected.has(o.id)).map((o) => o.id);
     if (!ids.length) return;
     setDispatching(true);
     setDispatchResult(null);
     setError(null);
     try {
       const res = await agentDispatchOrders(session.token, ids, DELIVERY_COMPANY);
+      const updatedById = new Map(res.orders.map((o) => [o.id, o]));
+      setOrders((cur) =>
+        cur
+          .map((o) => updatedById.get(o.id) ?? o)
+          .filter((o) => {
+            if (!selected.has(o.id)) return true;
+            if (o.delivery_tracking) return false;
+            if (isBlacklisted(o)) return false;
+            return true;
+          })
+      );
+      setSelected(new Set());
+      void loadCounts(session.token);
+      void loadStats(session.token);
       const succeeded = res.orders.filter((o) => !o.delivery_error).length;
       const failed = res.orders.filter((o) => o.delivery_error).length;
       setDispatchResult(failed > 0 ? `✓ ${succeeded} تم الإرسال · ✗ ${failed} فشل` : `✓ تم إرسال ${succeeded} طلب إلى Digylog`);
-      void loadOrders(session.token);
-      void loadCounts(session.token);
-      setSelected(new Set());
     } catch (e) {
       setError(errMsg(e));
     } finally {
@@ -218,6 +275,7 @@ export default function AgentWorkspacePage() {
   }
 
   const isDispatch = tab === "confirmed";
+  const isBlacklistTab = tab === "blacklist";
 
   if (!session) {
     return (
@@ -237,7 +295,7 @@ export default function AgentWorkspacePage() {
               <Phone className="h-5 w-5" />
             </div>
             <div>
-              <p className="text-xs font-black uppercase tracking-wide text-white/70">مركز الاتصال</p>
+              <p className="text-xs font-black uppercase tracking-wide text-white/70">مركز الاتصال · {DELIVERY_COMPANY}</p>
               <h1 className="text-xl font-black">{session.display_name}</h1>
             </div>
           </div>
@@ -250,7 +308,7 @@ export default function AgentWorkspacePage() {
               النسب
             </button>
             <button
-              onClick={() => { void loadOrders(session.token); void loadCounts(session.token); void loadProductCounts(session.token); }}
+              onClick={() => { void loadOrders(session.token); void loadCounts(session.token); void loadProductCounts(session.token); void loadStats(session.token); }}
               className="flex items-center gap-2 rounded-full bg-white/15 px-4 py-2 text-sm font-black transition hover:bg-white/25"
             >
               <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
@@ -267,32 +325,70 @@ export default function AgentWorkspacePage() {
         </div>
       </header>
 
-      {/* My Stats Panel */}
-      {showStats && myStats && (
+      {/* Stats Panel */}
+      {showStats && (myStats || detailedStats) && (
         <div className="border-b border-gray-200 bg-white">
           <div className="mx-auto max-w-[1280px] px-4 py-4 sm:px-6">
-            <p className="mb-2 text-xs font-black uppercase tracking-wide text-[#667085]">إحصائياتي (30 يوم)</p>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-              <div className="rounded-2xl border border-gray-100 bg-[#F8FAFD] p-3 text-center">
-                <p className="text-[10px] font-black uppercase text-[#667085]">نسبة التأكيد</p>
-                <p className="mt-1 text-lg font-black text-emerald-600">{myStats.confirmation_rate.toFixed(1)}%</p>
-                <p className="text-[10px] font-bold text-[#94A3B8]">{myStats.confirmed}/{myStats.total_assigned}</p>
-              </div>
-              <div className="rounded-2xl border border-gray-100 bg-[#F8FAFD] p-3 text-center">
-                <p className="text-[10px] font-black uppercase text-[#667085]">إجمالي الطلبات</p>
-                <p className="mt-1 text-lg font-black text-[#1E4A8C]">{myStats.total_assigned}</p>
-              </div>
-              <div className="rounded-2xl border border-gray-100 bg-[#F8FAFD] p-3 text-center">
-                <p className="text-[10px] font-black uppercase text-[#667085]">مفتوحة</p>
-                <p className="mt-1 text-lg font-black text-amber-600">{myStats.pending_open}</p>
-              </div>
-              <div className="rounded-2xl border border-gray-100 bg-[#F8FAFD] p-3 text-center">
-                <p className="text-[10px] font-black uppercase text-[#667085]">متوسط الرد</p>
-                <p className="mt-1 text-lg font-black text-[#1E4A8C]">
-                  {myStats.avg_response_minutes != null ? `${myStats.avg_response_minutes}د` : "—"}
-                </p>
-              </div>
-            </div>
+            {/* Basic stats row */}
+            {myStats && (
+              <>
+                <p className="mb-2 text-xs font-black uppercase tracking-wide text-[#667085]">إحصائياتي الشخصية</p>
+                <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                  <div className="rounded-2xl border border-gray-100 bg-[#F8FAFD] p-3 text-center">
+                    <p className="text-[10px] font-black uppercase text-[#667085]">نسبة التأكيد</p>
+                    <p className="mt-1 text-lg font-black text-emerald-600">{myStats.confirmation_rate.toFixed(1)}%</p>
+                    <p className="text-[10px] font-bold text-[#94A3B8]">{myStats.confirmed}/{myStats.total_assigned}</p>
+                  </div>
+                  <div className="rounded-2xl border border-gray-100 bg-[#F8FAFD] p-3 text-center">
+                    <p className="text-[10px] font-black uppercase text-[#667085]">إجمالي الطلبات</p>
+                    <p className="mt-1 text-lg font-black text-[#1E4A8C]">{myStats.total_assigned}</p>
+                  </div>
+                  <div className="rounded-2xl border border-gray-100 bg-[#F8FAFD] p-3 text-center">
+                    <p className="text-[10px] font-black uppercase text-[#667085]">مفتوحة</p>
+                    <p className="mt-1 text-lg font-black text-amber-600">{myStats.pending_open}</p>
+                  </div>
+                  <div className="rounded-2xl border border-gray-100 bg-[#F8FAFD] p-3 text-center">
+                    <p className="text-[10px] font-black uppercase text-[#667085]">متوسط الرد</p>
+                    <p className="mt-1 text-lg font-black text-[#1E4A8C]">
+                      {myStats.avg_response_minutes != null ? `${myStats.avg_response_minutes}د` : "—"}
+                    </p>
+                  </div>
+                </div>
+              </>
+            )}
+            {/* Detailed stats by period */}
+            {detailedStats && detailedStats.by_period.length > 0 && (
+              <>
+                <p className="mb-2 text-xs font-black uppercase tracking-wide text-[#667085]">نسبة التأكيد حسب الفترة</p>
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
+                  {detailedStats.by_period.map((p) => (
+                    <div key={p.key} className="rounded-2xl border border-gray-100 bg-[#F8FAFD] p-3 text-center">
+                      <p className="text-[10px] font-black uppercase text-[#667085]">{PERIOD_AR[p.key] ?? p.key}</p>
+                      <p className="mt-1 text-lg font-black text-[#1E4A8C]">{p.rate}%</p>
+                      <p className="text-[10px] font-bold text-[#94A3B8]">{p.confirmed}/{p.total}</p>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+            {/* Detailed stats by offer */}
+            {detailedStats && detailedStats.by_offer.length > 0 && (
+              <>
+                <p className="mb-2 mt-4 text-xs font-black uppercase tracking-wide text-[#667085]">نسبة التأكيد حسب العرض</p>
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+                  {detailedStats.by_offer.map((o) => {
+                    const offerLabel = HERO_OFFERS.find((h) => h.qty === o.qty)?.sublabel ?? `${o.qty}`;
+                    return (
+                      <div key={o.offer_id} className="rounded-2xl border border-gray-100 bg-[#F8FAFD] p-3 text-center">
+                        <p className="text-[10px] font-black uppercase text-[#667085]">{offerLabel}</p>
+                        <p className="mt-1 text-lg font-black text-emerald-600">{o.rate}%</p>
+                        <p className="text-[10px] font-bold text-[#94A3B8]">{o.confirmed}/{o.total}</p>
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
@@ -311,7 +407,7 @@ export default function AgentWorkspacePage() {
                 }`}
               >
                 {item.ar}
-                {badge ? (
+                {badge != null ? (
                   <span className={`rounded-full px-1.5 py-0.5 text-[10px] leading-none ${tab === item.value ? "bg-white/25 text-white" : "bg-[#1E4A8C]/10 text-[#1E4A8C]"}`}>
                     {badge}
                   </span>
@@ -391,16 +487,16 @@ export default function AgentWorkspacePage() {
               تصدير CSV
             </button>
             <button
-              onClick={handleDispatch}
-              disabled={dispatching || orders.length === 0}
-              className="flex items-center gap-2 rounded-full bg-[#1E4A8C] px-4 py-1.5 text-xs font-black text-white disabled:opacity-50"
+              onClick={() => void handleDispatch()}
+              disabled={!selected.size || dispatching}
+              className="flex items-center gap-2 rounded-full bg-[#16A34A] px-4 py-1.5 text-xs font-black text-white disabled:opacity-50"
             >
               {dispatching ? (
                 <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/40 border-t-white" />
               ) : (
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} className="h-4 w-4"><path d="M22 2L11 13" /><path d="M22 2L15 22l-4-9-9-4 20-7z" /></svg>
+                <Send className="h-4 w-4" />
               )}
-              إرسال إلى Digylog
+              إرسال إلى {DELIVERY_COMPANY}
             </button>
             {dispatchResult && (
               <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-700">{dispatchResult}</span>
@@ -421,6 +517,7 @@ export default function AgentWorkspacePage() {
               order={order}
               token={session.token}
               dispatchMode={isDispatch}
+              blacklistMode={isBlacklistTab}
               selected={selected.has(order.id)}
               onToggleSelect={() => toggleSelected(order.id)}
               onSaved={onSaved}
@@ -439,11 +536,12 @@ export default function AgentWorkspacePage() {
 }
 
 function CallCard({
-  order, token, dispatchMode, selected, onToggleSelect, onSaved, onError,
+  order, token, dispatchMode, blacklistMode, selected, onToggleSelect, onSaved, onError,
 }: {
   order: AdminOrder;
   token: string;
   dispatchMode: boolean;
+  blacklistMode: boolean;
   selected: boolean;
   onToggleSelect: () => void;
   onSaved: (order: AdminOrder) => void;
@@ -451,6 +549,7 @@ function CallCard({
 }) {
   const [disposition, setDisposition] = useState<string>("");
   const [name, setName] = useState(order.customer_name);
+  const [phone, setPhone] = useState(order.phone_local || order.phone_e164);
   const [qty, setQty] = useState(order.hero_qty);
   const [total, setTotal] = useState(order.total_mad);
   const [address, setAddress] = useState(order.address ?? "");
@@ -464,6 +563,7 @@ function CallCard({
 
   const detailsChanged =
     name.trim() !== order.customer_name ||
+    (blacklistMode && phone.trim() !== (order.phone_local || order.phone_e164)) ||
     qty !== order.hero_qty ||
     total !== order.total_mad ||
     address.trim() !== (order.address ?? "") ||
@@ -478,9 +578,16 @@ function CallCard({
     try {
       let updated = order;
       if (detailsChanged) {
+        if (blacklistMode && !isValidMoroccoMobile(phone)) {
+          throw new Error("دخل رقم هاتف مغربي صحيح.");
+        }
         updated = await agentEditOrder(token, order.id, {
-          customer_name: name.trim(), qty, total_mad: total,
-          address: address.trim(), delivery_city: city,
+          customer_name: name.trim(),
+          ...(blacklistMode ? { phone_raw: phone.trim(), phone_e164: toE164MoroccoPhone(phone) } : {}),
+          qty,
+          total_mad: total,
+          address: address.trim(),
+          delivery_city: city,
         });
       }
       if (disposition) {
@@ -526,7 +633,7 @@ function CallCard({
       ) : null}
       {order.delivery_error ? (
         <p className="mt-3 rounded-xl bg-red-50 px-3 py-2 text-xs font-black text-red-700">
-          فشل الإرسال: {order.delivery_error}
+          فشل الإرسال: {formatDeliveryError(order.delivery_error, order)}
         </p>
       ) : null}
 
@@ -548,6 +655,20 @@ function CallCard({
           <input value={name} onChange={(e) => setName(e.target.value)}
             className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm font-bold outline-none focus:border-[#1E4A8C]" />
         </div>
+        {blacklistMode && (
+          <div className="rounded-2xl border border-red-100 bg-red-50 p-3">
+            <label className="mb-1 block text-[11px] font-black text-red-700">تعديل رقم الهاتف</label>
+            <input
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              dir="ltr"
+              inputMode="tel"
+              placeholder="0612345678"
+              className="w-full rounded-xl border border-red-200 bg-white px-3 py-2 text-sm font-black outline-none focus:border-red-500"
+            />
+            <p className="mt-1 text-[11px] font-bold text-red-700">متاح فقط فـ Blacklist باش تصلح الرقم المرفوض من Digylog.</p>
+          </div>
+        )}
         <div>
           <label className="mb-1 block text-[11px] font-black text-[#667085]">العرض</label>
           <div className="flex flex-wrap gap-2">
@@ -582,7 +703,10 @@ function CallCard({
             className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm font-semibold outline-none focus:border-[#1E4A8C]" />
         </div>
         <div>
-          <label className="mb-1 block text-[11px] font-black text-[#1E4A8C]">مدينة {DELIVERY_COMPANY}</label>
+          <label className="mb-1 flex items-center gap-2 text-[11px] font-black text-[#1E4A8C]">
+            <Truck className="h-3.5 w-3.5" />
+            مدينة {DELIVERY_COMPANY}
+          </label>
           <CitySelect value={city} onChange={setCity} />
         </div>
       </div>

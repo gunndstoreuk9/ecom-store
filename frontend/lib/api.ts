@@ -909,6 +909,7 @@ export interface AgentOrdersQuery {
   call_status?: string;
   q?: string;
   bucket?: string;
+  product_sku?: string;
 }
 
 export async function getAgentOrders(token: string, query: AgentOrdersQuery = {}): Promise<{ total: number; limit: number; offset: number; orders: AdminOrder[] }> {
@@ -919,6 +920,7 @@ export async function getAgentOrders(token: string, query: AgentOrdersQuery = {}
   if (query.call_status) search.set("call_status", query.call_status);
   if (query.q) search.set("q", query.q);
   if (query.bucket) search.set("bucket", query.bucket);
+  if (query.product_sku) search.set("product_sku", query.product_sku);
   return api<{ total: number; limit: number; offset: number; orders: AdminOrder[] }>(`/v1/agents/me/orders?${search.toString()}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
@@ -945,6 +947,14 @@ export async function agentEditOrder(token: string, orderId: string, payload: Ad
     method: "PATCH",
     headers: { Authorization: `Bearer ${token}` },
     body: JSON.stringify(payload),
+  });
+}
+
+export async function getAgentCallCenterStats(token: string, productSku?: string): Promise<AdminCallCenterStats> {
+  const search = new URLSearchParams();
+  if (productSku) search.set("product_sku", productSku);
+  return api<AdminCallCenterStats>(`/v1/agents/me/call-center-stats${search.toString() ? `?${search.toString()}` : ""}`, {
+    headers: { Authorization: `Bearer ${token}` },
   });
 }
 

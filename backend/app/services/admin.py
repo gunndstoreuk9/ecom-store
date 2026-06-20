@@ -369,8 +369,72 @@ def get_call_center_stats(db: Session, *, product_sku: Optional[str] = None) -> 
     return AdminCallCenterStats(by_period=by_period, by_offer=by_offer)
 
 
+def get_agent_call_center_stats(db: Session, *, agent_id: str, product_sku: Optional[str] = None) -> AdminCallCenterStats:
+    from uuid import UUID as _UUID
+    now = datetime.now(timezone.utc)
+    today_start = datetime.combine(now.date(), time.min, tzinfo=timezone.utc)
+    yesterday_start = today_start - timedelta(days=1)
+    yesterday_end = today_start - timedelta(microseconds=1)
+    month_start = datetime(now.year, now.month, 1, tzinfo=timezone.utc)
+    last_month_end = month_start - timedelta(microseconds=1)
+    last_month_start = datetime(last_month_end.year, last_month_end.month, 1, tzinfo=timezone.utc)
+
+    periods = [
+        ("today", "Today", today_start, now),
+        ("yesterday", "Yesterday", yesterday_start, yesterday_end),
+        ("last_7_days", "Last 7 Days", now - timedelta(days=7), now),
+        ("last_15_days", "Last 15 Days", now - timedelta(days=15), now),
+        ("last_30_days", "Last 30 Days", now - timedelta(days=30), now),
+        ("last_month", "Last Month", last_month_start, last_month_end),
+        ("last_90_days", "Last 90 Days", now - timedelta(days=90), now),
+    ]
+    try:
+        aid = _UUID(agent_id)
+    except ValueError:
+        return AdminCallCenterStats(by_period=[], by_offer=[])
+
+    by_period = []
+    for key, label, start_at, end_at in periods:
+        total = _count_between_agent(db, start_at, end_at, aid, product_sku=product_sku)
+        confirmed = _count_between_agent(db, start_at, end_at, aid, CONFIRMED_STATUSES, product_sku=product_sku)
+        by_period.append(AdminRatePeriod(key=key, label=label, total=total, confirmed=confirmed, rate=_percent(confirmed, total)))
+
+    confirmed_expr = func.coalesce(func.sum(case((Order.status.in_(CONFIRMED_STATUSES), 1), else_=0)), 0)
+    offer_query = db.query(Order.hero_qty, func.count(Order.id), confirmed_expr).filter(Order.assigned_agent_id == aid)
+    if product_sku:
+        offer_query = offer_query.filter(Order.hero_sku == product_sku)
+    rows = offer_query.group_by(Order.hero_qty).order_by(Order.hero_qty.asc()).all()
+    by_offer = []
+    for qty, total, confirmed in rows:
+        total_i = int(total or 0)
+        confirmed_i = int(confirmed or 0)
+        by_offer.append(
+            AdminRateByOffer(
+                offer_id=_offer_label(int(qty or 1)),
+                qty=int(qty or 1),
+                total=total_i,
+                confirmed=confirmed_i,
+                rate=_percent(confirmed_i, total_i),
+            )
+        )
+    return AdminCallCenterStats(by_period=by_period, by_offer=by_offer)
+
+
 def _count_between(db: Session, start_at: datetime, end_at: datetime, statuses: Optional[set[str]] = None, product_sku: Optional[str] = None) -> int:
     query = db.query(func.count(Order.id)).filter(Order.created_at >= start_at, Order.created_at <= end_at)
+    if statuses:
+        query = query.filter(Order.status.in_(statuses))
+    if product_sku:
+        query = query.filter(Order.hero_sku == product_sku)
+    return int(query.scalar() or 0)
+
+
+def _count_between_agent(db: Session, start_at: datetime, end_at: datetime, agent_uuid, statuses: Optional[set[str]] = None, product_sku: Optional[str] = None) -> int:
+    query = db.query(func.count(Order.id)).filter(
+        Order.assigned_agent_id == agent_uuid,
+        Order.created_at >= start_at,
+        Order.created_at <= end_at,
+    )
     if statuses:
         query = query.filter(Order.status.in_(statuses))
     if product_sku:

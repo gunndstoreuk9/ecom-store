@@ -32,8 +32,8 @@ from app.services.agents import (
     list_agents,
     update_agent,
 )
-from app.services.admin import dispatch_orders, list_admin_orders, update_admin_order_call, update_admin_order_details, update_admin_order_status
-from app.schemas.admin import AdminDispatchRequest, AdminDispatchResponse, AdminOrderEditUpdate, AdminOrderListItem, AdminOrdersResponse, AdminOrderCallUpdate, AdminOrderStatusUpdate
+from app.services.admin import dispatch_orders, get_agent_call_center_stats, list_admin_orders, update_admin_order_call, update_admin_order_details, update_admin_order_status
+from app.schemas.admin import AdminCallCenterStats, AdminDispatchRequest, AdminDispatchResponse, AdminOrderEditUpdate, AdminOrderListItem, AdminOrdersResponse, AdminOrderCallUpdate, AdminOrderStatusUpdate
 
 router = APIRouter(prefix="/agents", tags=["agents"])
 
@@ -208,6 +208,15 @@ def agent_me(
     return AgentStatsResponse(**stats)
 
 
+@router.get("/me/call-center-stats", response_model=AdminCallCenterStats)
+def agent_call_center_stats(
+    product_sku: Optional[str] = Query(default=None),
+    agent_id: str = Depends(_require_agent_session),
+    db: Session = Depends(get_db),
+) -> AdminCallCenterStats:
+    return get_agent_call_center_stats(db, agent_id=agent_id, product_sku=product_sku)
+
+
 @router.get("/me/orders", response_model=AdminOrdersResponse)
 def agent_my_orders(
     limit: int = Query(default=50, ge=1, le=200),
@@ -215,6 +224,8 @@ def agent_my_orders(
     status_filter: Optional[str] = Query(default=None, alias="status"),
     call_status: Optional[str] = Query(default=None),
     q: Optional[str] = Query(default=None, max_length=160),
+    bucket: Optional[str] = Query(default=None),
+    product_sku: Optional[str] = Query(default=None),
     date_from: Optional[date] = Query(default=None),
     date_to: Optional[date] = Query(default=None),
     agent_id: str = Depends(_require_agent_session),
@@ -227,6 +238,8 @@ def agent_my_orders(
         status=status_filter,
         call_status=call_status,
         q=q,
+        bucket=bucket,
+        product_sku=product_sku,
         date_from=date_from,
         date_to=date_to,
         assigned_agent_id=agent_id,
