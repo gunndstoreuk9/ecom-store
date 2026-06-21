@@ -44,7 +44,7 @@ const CALL_VALUE_TO_API: Record<string, string> = {
 };
 
 type TabValue = "new" | "follow_up" | "confirmed" | "blacklist" | "all";
-type ProductFilterValue = "all" | "american-sugar-balance-complex" | "miracle-men-oil";
+type ProductFilterValue = "all" | "american-sugar-balance-complex" | "miracle-men-oil" | "HOYGI22-MAROC11";
 
 const TABS: { value: TabValue; fr: string; ar: string }[] = [
   { value: "new", fr: "Nouvelles", ar: "طلبات جديدة" },
@@ -58,6 +58,7 @@ const PRODUCT_FILTERS: { value: ProductFilterValue; fr: string; ar: string; shor
   { value: "all", fr: "All products", ar: "كل المنتجات", shortAr: "الكل" },
   { value: "american-sugar-balance-complex", fr: "Blood Sugar Complex", ar: "المركّب الأمريكي لضبط السكر", shortAr: "ضبط السكر" },
   { value: "miracle-men-oil", fr: "Miracle Men Oil", ar: "الدهان الأمريكي المعجزة للرجال", shortAr: "دهان الرجال" },
+  { value: "HOYGI22-MAROC11", fr: "Hoygi Serum", ar: "سيرم علاج التجاعيد ببتيد النحاس الأزرق Hoygi", shortAr: "Hoygi سيرم" },
 ];
 
 export default function CallCenterPage() {
@@ -67,7 +68,7 @@ export default function CallCenterPage() {
   const [orders, setOrders] = useState<AdminOrder[]>([]);
   const [stats, setStats] = useState<AdminCallCenterStats | null>(null);
   const [counts, setCounts] = useState<{ new: number; follow_up: number; confirmed: number; blacklist: number }>({ new: 0, follow_up: 0, confirmed: 0, blacklist: 0 });
-  const [productCounts, setProductCounts] = useState<Record<ProductFilterValue, number>>({ all: 0, "american-sugar-balance-complex": 0, "miracle-men-oil": 0 });
+  const [productCounts, setProductCounts] = useState<Record<ProductFilterValue, number>>({ all: 0, "american-sugar-balance-complex": 0, "miracle-men-oil": 0, "HOYGI22-MAROC11": 0 });
   const [showStats, setShowStats] = useState(true);
   const [tab, setTab] = useState<TabValue>("new");
   const [productFilter, setProductFilter] = useState<ProductFilterValue>("all");

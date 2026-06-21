@@ -39,7 +39,7 @@ const CALL_STATUSES = [
 const CALL_VALUE_TO_API: Record<string, string> = { annule: "cancelled" };
 
 type TabValue = "new" | "follow_up" | "confirmed" | "blacklist" | "all";
-type ProductFilter = "all" | "american-sugar-balance-complex" | "miracle-men-oil";
+type ProductFilter = "all" | "american-sugar-balance-complex" | "miracle-men-oil" | "HOYGI22-MAROC11";
 
 const TABS: { value: TabValue; ar: string }[] = [
   { value: "new", ar: "طلبات جديدة" },
@@ -53,6 +53,7 @@ const PRODUCT_FILTERS: { value: ProductFilter; ar: string; shortAr: string }[] =
   { value: "all", ar: "كل المنتجات", shortAr: "الكل" },
   { value: "american-sugar-balance-complex", ar: "المركّب الأمريكي لضبط السكر", shortAr: "ضبط السكر" },
   { value: "miracle-men-oil", ar: "الدهان الأمريكي المعجزة للرجال", shortAr: "دهان الرجال" },
+  { value: "HOYGI22-MAROC11", ar: "سيرم علاج التجاعيد ببتيد النحاس الأزرق Hoygi", shortAr: "Hoygi سيرم" },
 ];
 
 const PERIOD_AR: Record<string, string> = {
@@ -70,6 +71,7 @@ function matchCity(value?: string | null): string {
 function displayProductName(order: AdminOrder): string {
   if (order.hero_sku === "miracle-men-oil") return "الدهان الأمريكي المعجزة للرجال";
   if (order.hero_sku === "american-sugar-balance-complex") return "المركّب الأمريكي لضبط السكر";
+  if (order.hero_sku === "HOYGI22-MAROC11") return "سيرم علاج التجاعيد ببتيد النحاس الأزرق Hoygi";
   return order.items?.[0]?.name_ar ?? order.hero_sku;
 }
 
@@ -111,7 +113,7 @@ export default function AgentWorkspacePage() {
   const [payoutVersion, setPayoutVersion] = useState(0);
   const [orders, setOrders] = useState<AdminOrder[]>([]);
   const [counts, setCounts] = useState({ new: 0, follow_up: 0, confirmed: 0, blacklist: 0 });
-  const [productCounts, setProductCounts] = useState<Record<ProductFilter, number>>({ all: 0, "american-sugar-balance-complex": 0, "miracle-men-oil": 0 });
+  const [productCounts, setProductCounts] = useState<Record<ProductFilter, number>>({ all: 0, "american-sugar-balance-complex": 0, "miracle-men-oil": 0, "HOYGI22-MAROC11": 0 });
   const [tab, setTab] = useState<TabValue>("new");
   const [productFilter, setProductFilter] = useState<ProductFilter>("all");
   const [query, setQuery] = useState("");
