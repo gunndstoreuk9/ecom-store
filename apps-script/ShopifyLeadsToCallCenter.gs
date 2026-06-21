@@ -1,5 +1,5 @@
 const CALL_CENTER_IMPORT_URL = 'https://api.tawazonhealth.store/v1/orders/sheet-import';
-const CALL_CENTER_IMPORT_TOKEN = 'CHANGE_THIS_TO_SHOPIFY_SHEET_WEBHOOK_TOKEN';
+const CALL_CENTER_IMPORT_TOKEN = 'tawazon_shopify_2026_secret_123';
 // Optional but recommended: paste the Google Sheet ID and tab name to avoid importing the wrong sheet.
 const SHOPIFY_SPREADSHEET_ID = '';
 const SHOPIFY_SHEET_NAME = '';
@@ -21,7 +21,8 @@ const REQUIRED_HEADERS = ['SKU', 'FULL NAME', 'PHONE NUMBER'];
 
 const PRODUCT_NAME_RULES = [
   { sku: 'MIRACLE-MEN-OIL-30ML', words: ['MIRACLE', 'MEN OIL', 'MEN-OIL', 'XXL', 'PROSPER MAN'] },
-  { sku: 'TOPLUX-BSC-940-60', words: ['BLOOD SUGAR', 'SUGAR', 'COMPLIX', 'COMPLEX', 'سكر'] }
+  { sku: 'TOPLUX-BSC-940-60', words: ['BLOOD SUGAR', 'SUGAR', 'COMPLIX', 'COMPLEX', 'سكر'] },
+  { sku: 'HOYGI22-MAROC11', words: ['HOYGI SERUM', 'Peptide', 'SERUM', 'HOYGI', 'BLUE'] }
 ];
 
 function sendNewLeadsToCallCenter() {
@@ -209,7 +210,7 @@ function inferSkuFromProduct_(productName) {
 
 function looksLikeKnownSku_(value) {
   const text = String(value || '').trim().toUpperCase();
-  return text === 'MIRACLE-MEN-OIL-30ML' || text === 'TOPLUX-BSC-940-60';
+  return text === 'MIRACLE-MEN-OIL-30ML' || text === 'TOPLUX-BSC-940-60' || text === 'HOYGI22-MAROC11';
 }
 
 function looksLikePhone_(value) {
