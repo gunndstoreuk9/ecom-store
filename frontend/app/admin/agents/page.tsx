@@ -27,6 +27,7 @@ const ADMIN_KEY_STORAGE = "tawazon_admin_key";
 const SUPPORTED_SKUS = [
   { value: "american-sugar-balance-complex", label: "المركّب الأمريكي لضبط السكر" },
   { value: "miracle-men-oil", label: "الدهان الأمريكي المعجزة للرجال" },
+  { value: "HOYGI22-MAROC11", label: "سيرم علاج التجاعيد Hoygi" },
 ];
 const AUTO_REFRESH_MS = 60_000;
 
