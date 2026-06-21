@@ -27,6 +27,10 @@ PRODUCTS = {
         "name_ar": "الزيت المعجزة للرجال",
         "sheet_sku": "MIRACLE-MEN-OIL-30ML",
     },
+    "HOYGI22-MAROC11": {
+        "name_ar": "سيرم علاج التجاعيد ببتيد النحاس الأزرق Hoygi",
+        "sheet_sku": "HOYGI22-MAROC11",
+    },
 }
 
 SHEET_SKU_TO_PRODUCT_SKU = {
@@ -303,6 +307,8 @@ def _product_sku_from_sheet(sheet_sku: str, product_name: str | None = None) -> 
             return product_sku
 
     haystack = f"{normalized_sku} {product_name or ''}".lower()
+    if "hoygi" in haystack or "peptide" in haystack or "blue" in haystack or "hoygi22" in haystack:
+        return "HOYGI22-MAROC11"
     if "miracle" in haystack or "men-oil" in haystack or "men oil" in haystack or "xxl" in haystack or "prosper man" in haystack:
         return "miracle-men-oil"
     if "sugar" in haystack or "balance" in haystack or "bsc" in haystack or "complix" in haystack or "complex" in haystack or "سكر" in haystack:
