@@ -47,6 +47,7 @@ SUPPORTED_SHEET_IMPORT_SKUS = {
     "MIRACLE-MEN-OIL-30ML",
     "american-sugar-balance-complex",
     "miracle-men-oil",
+    "HOYGI22-MAROC11",
 }
 
 
