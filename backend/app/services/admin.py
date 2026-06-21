@@ -41,7 +41,7 @@ CANCELLED_STATUSES = {"cancelled", "no_answer"}
 CONTACTABLE_STATUSES = {"new", "no_answer", "awaiting_confirmation"}
 # Orders in these states are already handled and should not appear in contact queues.
 NON_CONTACT_STATUSES = {"cancelled", "refused", "delivered", "returned", "shipped", "packed", "confirmed"}
-BLACKLIST_ERROR_PATTERNS = ("%liste noire%", "%blacklist%")
+BLACKLIST_ERROR_PATTERNS = ("%liste noire%", "%blacklist%", "%القائمة السوداء%", "%noire%")
 SUPPORTED_SHEET_IMPORT_SKUS = {
     "TOPLUX-BSC-940-60",
     "MIRACLE-MEN-OIL-30ML",

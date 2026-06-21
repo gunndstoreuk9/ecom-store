@@ -77,7 +77,7 @@ function displayProductName(order: AdminOrder): string {
 
 function isBlacklisted(order: AdminOrder): boolean {
   const msg = (order.delivery_error || "").toLowerCase();
-  return msg.includes("liste noire") || msg.includes("blacklist");
+  return msg.includes("liste noire") || msg.includes("blacklist") || msg.includes("القائمة السوداء") || msg.includes("noire");
 }
 
 function formatDeliveryError(message: string, order: AdminOrder): string {

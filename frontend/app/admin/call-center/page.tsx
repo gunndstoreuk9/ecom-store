@@ -1083,7 +1083,7 @@ function errorMessage(err: unknown, lang: Lang) {
 
 function isBlacklisted(order: AdminOrder) {
   const message = (order.delivery_error || "").toLowerCase();
-  return message.includes("liste noire") || message.includes("blacklist");
+  return message.includes("liste noire") || message.includes("blacklist") || message.includes("القائمة السوداء") || message.includes("noire");
 }
 
 function formatDeliveryError(message: string, order: AdminOrder, lang: Lang) {
