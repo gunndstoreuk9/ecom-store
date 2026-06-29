@@ -525,7 +525,7 @@ export interface AdminOrderCreate {
 }
 
 export async function adminCreateManualOrder(adminKey: string, payload: AdminOrderCreate): Promise<AdminOrder> {
-  return fetchApi("/v1/admin/orders/manual", {
+  return apiFetch("/v1/admin/orders/manual", {
     method: "POST",
     headers: { Authorization: `Bearer ${adminKey}` },
     body: JSON.stringify(payload),
@@ -533,7 +533,7 @@ export async function adminCreateManualOrder(adminKey: string, payload: AdminOrd
 }
 
 export async function agentCreateManualOrder(token: string, payload: AdminOrderCreate): Promise<AdminOrder> {
-  return fetchApi("/v1/agents/me/orders/manual", {
+  return apiFetch("/v1/agents/me/orders/manual", {
     method: "POST",
     headers: { Authorization: `Bearer ${token}` },
     body: JSON.stringify(payload),
