@@ -496,7 +496,7 @@ export default function CallCenterPage() {
           adminKey={currentKey}
           lang={lang}
           onClose={() => setShowManualModal(false)}
-          onSuccess={(newOrder) => {
+          onSuccess={() => {
             setShowManualModal(false);
             void loadOrders();
             void refreshCounts();

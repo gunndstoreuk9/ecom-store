@@ -564,7 +564,7 @@ export default function AgentWorkspacePage() {
         <ManualOrderModal
           token={session.token}
           onClose={() => setShowManualModal(false)}
-          onSuccess={(newOrder) => {
+          onSuccess={() => {
             setShowManualModal(false);
             void loadOrders(session.token);
             void loadCounts(session.token);
