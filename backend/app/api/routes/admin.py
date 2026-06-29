@@ -18,6 +18,7 @@ from app.schemas.admin import (
     AdminDispatchRequest,
     AdminDispatchResponse,
     AdminOrderCallUpdate,
+    AdminOrderCreate,
     AdminOrderEditUpdate,
     AdminOrderListItem,
     AdminOrdersResponse,
@@ -34,6 +35,7 @@ from app.schemas.admin import (
 from app.schemas.store_analytics import StoreAnalyticsResponse
 from app.services.admin import (
     cleanup_bad_sheet_imports,
+    create_manual_order,
     dispatch_orders,
     get_admin_analytics,
     get_call_center_stats,
@@ -166,6 +168,18 @@ def admin_orders(
         date_to=date_to,
         product_sku=product_sku,
     )
+
+
+@router.post("/orders/manual", response_model=AdminOrderListItem, dependencies=[Depends(require_call_center_key)])
+async def admin_create_manual_order(
+    request: Request,
+    db: Session = Depends(get_db),
+) -> AdminOrderListItem:
+    payload = await _parse_body(request, AdminOrderCreate)
+    try:
+        return create_manual_order(db, payload)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc))
 
 
 @router.patch("/orders/{order_id}/status", response_model=AdminOrderListItem, dependencies=[Depends(require_call_center_key)])

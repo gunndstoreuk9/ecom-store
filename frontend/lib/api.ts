@@ -508,6 +508,38 @@ export async function getCallCenterStats(adminKey: string, productSku?: string):
   });
 }
 
+export interface AdminOrderCreate {
+  customer_name: string;
+  phone_raw: string;
+  city?: string;
+  address?: string;
+  product_sku: string;
+  qty: number;
+  price_mad: number;
+  shipping_cost_mad?: number;
+  payment_method?: string;
+  notes?: string;
+  status?: string;
+  assigned_agent_id?: string;
+  force_duplicate?: boolean;
+}
+
+export async function adminCreateManualOrder(adminKey: string, payload: AdminOrderCreate): Promise<AdminOrder> {
+  return fetchApi("/v1/admin/orders/manual", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${adminKey}` },
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function agentCreateManualOrder(token: string, payload: AdminOrderCreate): Promise<AdminOrder> {
+  return fetchApi("/v1/agents/me/orders/manual", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify(payload),
+  });
+}
+
 export async function dispatchOrders(adminKey: string, orderIds: string[], deliveryCompany: string): Promise<AdminDispatchResponse> {
   return api<AdminDispatchResponse>(`/v1/admin/dispatch`, {
     method: "POST",

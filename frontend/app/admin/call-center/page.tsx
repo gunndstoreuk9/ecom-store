@@ -2,12 +2,14 @@
 
 import Link from "next/link";
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { ArrowLeft, Phone, RefreshCw, Truck, Download, Send, BarChart3, Wallet, Pencil, RotateCcw, Lock, ListChecks } from "lucide-react";
+import { ArrowLeft, Phone, RefreshCw, Truck, Download, Send, BarChart3, Wallet, Pencil, RotateCcw, Lock, ListChecks, Plus, X } from "lucide-react";
 import {
   AdminCallCenterStats,
   AdminOrder,
+  AdminOrderCreate,
   ApiError,
   ConfirmationPayout,
+  adminCreateManualOrder,
   dispatchOrders,
   editAdminOrder,
   getAdminOrders,
@@ -79,6 +81,7 @@ export default function CallCenterPage() {
   const [role, setRole] = useState<"admin" | "call_center" | null>(null);
   const [payoutVersion, setPayoutVersion] = useState(0);
   const [loginError, setLoginError] = useState<string | null>(null);
+  const [showManualModal, setShowManualModal] = useState(false);
 
   const isArabic = lang === "ar";
   const t = (en: string, ar: string) => (isArabic ? ar : en);
@@ -374,6 +377,13 @@ export default function CallCenterPage() {
               </button>
             );
           })}
+          <button
+            onClick={() => setShowManualModal(true)}
+            className="flex items-center gap-1.5 rounded-full border-2 border-dashed border-[#1E4A8C]/30 bg-white px-4 py-1 text-xs font-black text-[#1E4A8C] transition hover:border-[#1E4A8C] hover:bg-[#EEF5FF]"
+          >
+            <Plus className="h-4 w-4" />
+            {t("New Order", "طلب جديد")}
+          </button>
           <div className="ms-auto flex items-center gap-2">
             <input
               value={query}
@@ -480,6 +490,21 @@ export default function CallCenterPage() {
           </div>
         ) : null}
       </main>
+
+      {showManualModal && currentKey && (
+        <ManualOrderModal
+          adminKey={currentKey}
+          lang={lang}
+          onClose={() => setShowManualModal(false)}
+          onSuccess={(newOrder) => {
+            setShowManualModal(false);
+            void loadOrders();
+            void refreshCounts();
+            void refreshProductCounts();
+            void loadStats();
+          }}
+        />
+      )}
     </section>
   );
 }
@@ -1104,4 +1129,221 @@ function formatDeliveryError(message: string, order: AdminOrder, lang: Lang) {
 
 function fallbackError(lang: Lang) {
   return lang === "ar" ? "تعذر حفظ نتيجة المكالمة." : "Could not save call result.";
+}
+
+function ManualOrderModal({
+  adminKey,
+  lang,
+  onClose,
+  onSuccess,
+}: {
+  adminKey: string;
+  lang: Lang;
+  onClose: () => void;
+  onSuccess: (order: AdminOrder) => void;
+}) {
+  const isArabic = lang === "ar";
+  const t = (en: string, ar: string) => (isArabic ? ar : en);
+
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [city, setCity] = useState("");
+  const [address, setAddress] = useState("");
+  const [productSku, setProductSku] = useState<string>(PRODUCT_FILTERS[1].value);
+  const [qty, setQty] = useState(1);
+  const [priceMad, setPriceMad] = useState(199);
+  const [shippingMad, setShippingMad] = useState(0);
+  const [paymentMethod, setPaymentMethod] = useState("cod");
+  const [notes, setNotes] = useState("");
+  const [status, setStatus] = useState("new");
+  
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [forceDuplicate, setForceDuplicate] = useState(false);
+
+  const total = (qty * priceMad) + shippingMad;
+
+  useEffect(() => {
+    if (productSku === "american-sugar-balance-complex") setPriceMad(199);
+    else if (productSku === "miracle-men-oil") setPriceMad(199);
+    else if (productSku === "HOYGI22-MAROC11") setPriceMad(199);
+  }, [productSku]);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!name.trim() || !phone.trim() || !city.trim() || !address.trim()) {
+      setError(t("Please fill all required fields.", "المرجو ملء جميع الحقول الإجبارية (الاسم، الهاتف، المدينة، العنوان)."));
+      return;
+    }
+    if (!isValidMoroccoMobile(phone)) {
+      setError(t("Invalid phone number.", "رقم الهاتف غير صحيح."));
+      return;
+    }
+
+    setSaving(true);
+    setError(null);
+    try {
+      const payload: AdminOrderCreate = {
+        customer_name: name.trim(),
+        phone_raw: phone.trim(),
+        city: city.trim(),
+        address: address.trim(),
+        product_sku: productSku,
+        qty,
+        price_mad: priceMad,
+        shipping_cost_mad: shippingMad,
+        payment_method: paymentMethod,
+        notes: notes.trim() || undefined,
+        status,
+        force_duplicate: forceDuplicate,
+      };
+      const order = await adminCreateManualOrder(adminKey, payload);
+      onSuccess(order);
+      alert(t("Order created successfully", "تم إنشاء الطلب بنجاح"));
+    } catch (err) {
+      const msg = errorMessage(err, lang);
+      if (msg.toLowerCase().includes("duplicate") || msg.includes("تكرار")) {
+        setError(t("This phone number already has an active order. Force create?", "هاد الرقم ديجا عندو طلب مفتوح. واش بغيتي تزيدو بزز؟"));
+        setForceDuplicate(true);
+      } else {
+        setError(msg);
+      }
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm" dir={isArabic ? "rtl" : "ltr"}>
+      <div className="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-3xl bg-white shadow-2xl">
+        <div className="flex items-center justify-between border-b border-gray-100 bg-[#F8FAFD] px-6 py-4">
+          <h2 className="text-lg font-black text-[#1E4A8C]">{t("New Manual Order", "إضافة طلب جديد")}</h2>
+          <button onClick={onClose} className="rounded-full p-2 text-gray-400 transition hover:bg-gray-200 hover:text-gray-600">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+        
+        <form onSubmit={handleSubmit} className="flex-1 overflow-auto p-6">
+          {error && (
+            <div className="mb-6 rounded-2xl border border-red-100 bg-red-50 p-4 text-sm font-bold text-red-700">
+              {error}
+              {forceDuplicate && (
+                <div className="mt-3">
+                  <label className="flex items-center gap-2 text-red-800">
+                    <input type="checkbox" checked={forceDuplicate} onChange={(e) => setForceDuplicate(e.target.checked)} className="h-4 w-4 accent-red-600" />
+                    {t("Confirm duplicate order creation", "تأكيد إضافة الطلب رغم التكرار")}
+                  </label>
+                </div>
+              )}
+            </div>
+          )}
+
+          <div className="grid gap-6 md:grid-cols-2">
+            <div className="space-y-4">
+              <h3 className="text-xs font-black uppercase text-[#667085]">{t("Customer Info", "معلومات الزبون")}</h3>
+              
+              <div>
+                <label className="mb-1 block text-[11px] font-black text-[#667085]">{t("Full Name *", "الاسم الكامل *")}</label>
+                <input value={name} onChange={(e) => setName(e.target.value)} required
+                  className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm font-bold outline-none focus:border-[#1E4A8C]" />
+              </div>
+              
+              <div>
+                <label className="mb-1 block text-[11px] font-black text-[#667085]">{t("Phone *", "رقم الهاتف *")}</label>
+                <input value={phone} onChange={(e) => { setPhone(e.target.value); setForceDuplicate(false); setError(null); }} required dir="ltr"
+                  className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm font-bold outline-none focus:border-[#1E4A8C]" />
+              </div>
+              
+              <div>
+                <label className="mb-1 block text-[11px] font-black text-[#667085]">{t("City *", "المدينة *")}</label>
+                <CitySelect value={city} onChange={setCity} lang={lang} />
+              </div>
+              
+              <div>
+                <label className="mb-1 block text-[11px] font-black text-[#667085]">{t("Address *", "العنوان *")}</label>
+                <textarea value={address} onChange={(e) => setAddress(e.target.value)} required rows={2}
+                  className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm font-bold outline-none focus:border-[#1E4A8C]" />
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <h3 className="text-xs font-black uppercase text-[#667085]">{t("Order Details", "تفاصيل الطلب")}</h3>
+              
+              <div>
+                <label className="mb-1 block text-[11px] font-black text-[#667085]">{t("Product *", "المنتج *")}</label>
+                <select value={productSku} onChange={(e) => setProductSku(e.target.value)} required
+                  className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm font-bold outline-none focus:border-[#1E4A8C]">
+                  {PRODUCT_FILTERS.filter(f => f.value !== "all").map(f => (
+                    <option key={f.value} value={f.value}>{t(f.fr, f.ar)}</option>
+                  ))}
+                </select>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="mb-1 block text-[11px] font-black text-[#667085]">{t("Quantity", "الكمية")}</label>
+                  <input type="number" min={1} value={qty} onChange={(e) => setQty(Math.max(1, Number(e.target.value) || 1))} required
+                    className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm font-bold outline-none focus:border-[#1E4A8C]" />
+                </div>
+                <div>
+                  <label className="mb-1 block text-[11px] font-black text-[#667085]">{t("Unit Price (MAD)", "ثمن الوحدة (درهم)")}</label>
+                  <input type="number" min={0} value={priceMad} onChange={(e) => setPriceMad(Math.max(0, Number(e.target.value) || 0))} required
+                    className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm font-bold outline-none focus:border-[#1E4A8C]" />
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="mb-1 block text-[11px] font-black text-[#667085]">{t("Shipping (MAD)", "ثمن التوصيل (درهم)")}</label>
+                  <input type="number" min={0} value={shippingMad} onChange={(e) => setShippingMad(Math.max(0, Number(e.target.value) || 0))} required
+                    className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm font-bold outline-none focus:border-[#1E4A8C]" />
+                </div>
+                <div>
+                  <label className="mb-1 block text-[11px] font-black text-[#1E4A8C]">{t("Total", "المجموع")}</label>
+                  <div className="w-full rounded-xl border border-[#1E4A8C]/20 bg-[#EEF5FF] px-3 py-2 text-sm font-black text-[#1E4A8C]">
+                    {total} MAD
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="mb-1 block text-[11px] font-black text-[#667085]">{t("Payment Method", "طريقة الدفع")}</label>
+                  <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)}
+                    className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm font-bold outline-none focus:border-[#1E4A8C]">
+                    <option value="cod">{t("Cash on Delivery", "الدفع عند الاستلام")}</option>
+                    <option value="card">{t("Credit Card", "البطاقة البنكية")}</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="mb-1 block text-[11px] font-black text-[#667085]">{t("Status", "الحالة")}</label>
+                  <select value={status} onChange={(e) => setStatus(e.target.value)}
+                    className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm font-bold outline-none focus:border-[#1E4A8C]">
+                    <option value="new">{t("New", "جديد")}</option>
+                    <option value="confirmed">{t("Confirmed", "مؤكد")}</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="mb-1 block text-[11px] font-black text-[#667085]">{t("Notes", "ملاحظات")}</label>
+                <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2}
+                  className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm font-bold outline-none focus:border-[#1E4A8C]" />
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-8 flex items-center justify-end gap-3 border-t border-gray-100 pt-6">
+            <button type="button" onClick={onClose} className="rounded-full px-5 py-2.5 text-sm font-black text-[#667085] transition hover:bg-gray-100">
+              {t("Cancel", "إلغاء")}
+            </button>
+            <button type="submit" disabled={saving} className="flex items-center gap-2 rounded-full bg-[#1E4A8C] px-6 py-2.5 text-sm font-black text-white transition hover:bg-[#173B70] disabled:opacity-50">
+              {saving ? <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" /> : <Plus className="h-4 w-4" />}
+              {t("Save Order", "حفظ الطلب")}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
 }

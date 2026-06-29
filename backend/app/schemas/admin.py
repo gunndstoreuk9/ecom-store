@@ -199,6 +199,31 @@ class AdminOrderEditUpdate(BaseModel):
     total_mad: Optional[int] = Field(default=None, ge=0, le=1000000)
 
 
+class AdminOrderCreate(BaseModel):
+    customer_name: str = Field(min_length=2, max_length=160)
+    phone_raw: str = Field(min_length=8, max_length=64)
+    city: Optional[str] = Field(default=None, max_length=120)
+    address: Optional[str] = Field(default=None, max_length=2000)
+    product_sku: str = Field(max_length=120)
+    qty: int = Field(default=1, ge=1)
+    price_mad: int = Field(ge=0)
+    shipping_cost_mad: Optional[int] = Field(default=0, ge=0)
+    payment_method: Optional[str] = Field(default="cod", max_length=32)
+    notes: Optional[str] = Field(default=None, max_length=2000)
+    status: str = Field(default="new", max_length=32)
+    assigned_agent_id: Optional[str] = None
+    force_duplicate: bool = False
+
+    @field_validator("status")
+    @classmethod
+    def validate_status(cls, value: str) -> str:
+        normalized = value.strip().lower()
+        if normalized not in ORDER_STATUSES:
+            allowed = ", ".join(sorted(ORDER_STATUSES))
+            raise ValueError(f"Status must be one of: {allowed}")
+        return normalized
+
+
 class AdminDispatchRequest(BaseModel):
     order_ids: list[str] = Field(min_length=1)
     delivery_company: Optional[str] = Field(default=None, max_length=64)

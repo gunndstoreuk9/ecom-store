@@ -250,6 +250,90 @@ def update_admin_order_details(
     return to_admin_order(order)
 
 
+def create_manual_order(
+    db: Session,
+    payload: "AdminOrderCreate",
+    *,
+    created_by_agent_id: Optional[str] = None,
+) -> AdminOrderListItem:
+    from app.services.orders import _next_public_order_number, _product_name_ar, _try_auto_assign
+    from app.services.phone import normalize_morocco_phone, to_local_morocco_phone, meta_phone_hash_input, tiktok_phone_hash_input
+    from app.services.hashing import sha256_hex
+    from datetime import datetime, timezone
+    
+    phone_e164 = normalize_morocco_phone(payload.phone_raw)
+    phone_local = to_local_morocco_phone(phone_e164)
+    
+    if not payload.force_duplicate:
+        existing = db.query(Order).filter(
+            Order.phone_e164 == phone_e164,
+            Order.status.in_(["new", "awaiting_confirmation", "confirmed", "packed", "shipped"])
+        ).first()
+        if existing:
+            raise ValueError(f"Duplicate active order found for phone {phone_e164}")
+
+    total_mad = (payload.price_mad * payload.qty) + payload.shipping_cost_mad
+
+    utm = {
+        "source": "manual",
+        "payment_method": payload.payment_method,
+        "shipping_cost_mad": payload.shipping_cost_mad,
+    }
+    if created_by_agent_id:
+        utm["created_by_agent_id"] = created_by_agent_id
+
+    order = Order(
+        public_order_number=_next_public_order_number(db),
+        status=payload.status,
+        customer_name=payload.customer_name.strip(),
+        phone_raw=payload.phone_raw.strip(),
+        phone_local=phone_local,
+        phone_e164=phone_e164,
+        phone_hash_meta=sha256_hex(meta_phone_hash_input(phone_e164)),
+        phone_hash_tiktok=sha256_hex(tiktok_phone_hash_input(phone_e164)),
+        city=payload.city.strip() if payload.city else None,
+        address=payload.address.strip() if payload.address else None,
+        risk_score=0,
+        risk_level="low",
+        fraud_flags={"source": "manual_entry"},
+        fraud_checked_at=datetime.now(timezone.utc),
+        hero_sku=payload.product_sku,
+        hero_qty=payload.qty,
+        hero_price_mad=payload.price_mad,
+        subtotal_mad=payload.price_mad * payload.qty,
+        total_mad=total_mad,
+        currency="MAD",
+        utm=utm,
+        call_note=payload.notes.strip() if payload.notes else None,
+        sheet_sync_status="pending",
+    )
+    if payload.assigned_agent_id:
+        try:
+            order.assigned_agent_id = UUID(payload.assigned_agent_id)
+        except ValueError:
+            pass
+            
+    order.items.append(
+        OrderItem(
+            sku=payload.product_sku,
+            name_ar=_product_name_ar(payload.product_sku),
+            qty=payload.qty,
+            unit_price_mad=payload.price_mad,
+            total_price_mad=payload.price_mad * payload.qty,
+            item_type="hero",
+            added_via="manual",
+        )
+    )
+    db.add(order)
+    db.commit()
+    db.refresh(order)
+    
+    if not order.assigned_agent_id:
+        _try_auto_assign(db, order)
+        
+    return to_admin_order(order)
+
+
 def dispatch_orders(
     db: Session,
     *,

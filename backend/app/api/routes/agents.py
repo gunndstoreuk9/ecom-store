@@ -33,9 +33,9 @@ from app.services.agents import (
     list_agents,
     update_agent,
 )
-from app.services.admin import dispatch_orders, get_agent_call_center_stats, list_admin_orders, update_admin_order_call, update_admin_order_details, update_admin_order_status
+from app.services.admin import create_manual_order, dispatch_orders, get_agent_call_center_stats, list_admin_orders, update_admin_order_call, update_admin_order_details, update_admin_order_status
 from app.services.payouts import PayoutPinError, get_agent_payout, reset_agent_payout
-from app.schemas.admin import AdminCallCenterStats, ConfirmationPayoutResponse, AdminDispatchRequest, AdminDispatchResponse, AdminOrderEditUpdate, AdminOrderListItem, AdminOrdersResponse, AdminOrderCallUpdate, AdminOrderStatusUpdate
+from app.schemas.admin import AdminCallCenterStats, ConfirmationPayoutResponse, AdminDispatchRequest, AdminDispatchResponse, AdminOrderCreate, AdminOrderEditUpdate, AdminOrderListItem, AdminOrdersResponse, AdminOrderCallUpdate, AdminOrderStatusUpdate
 
 router = APIRouter(prefix="/agents", tags=["agents"])
 
@@ -319,6 +319,22 @@ def agent_my_orders(
         date_to=date_to,
         assigned_agent_id=agent_id,
     )
+
+
+@router.post("/me/orders/manual", response_model=AdminOrderListItem)
+async def agent_create_manual_order(
+    request: Request,
+    agent_id: str = Depends(_require_agent_session),
+    db: Session = Depends(get_db),
+) -> AdminOrderListItem:
+    payload = await _parse_body(request, AdminOrderCreate)
+    # Force assigned agent to the current agent if not specified
+    if not payload.assigned_agent_id:
+        payload.assigned_agent_id = agent_id
+    try:
+        return create_manual_order(db, payload, created_by_agent_id=agent_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc))
 
 
 @router.patch("/me/orders/{order_id}/call", response_model=AdminOrderListItem)
