@@ -525,15 +525,15 @@ export interface AdminOrderCreate {
 }
 
 export async function adminCreateManualOrder(adminKey: string, payload: AdminOrderCreate): Promise<AdminOrder> {
-  return apiFetch("/v1/admin/orders/manual", {
+  return api<AdminOrder>("/v1/admin/orders/manual", {
     method: "POST",
-    headers: { Authorization: `Bearer ${adminKey}` },
+    headers: { "X-Admin-Key": adminKey },
     body: JSON.stringify(payload),
   });
 }
 
 export async function agentCreateManualOrder(token: string, payload: AdminOrderCreate): Promise<AdminOrder> {
-  return apiFetch("/v1/agents/me/orders/manual", {
+  return api<AdminOrder>("/v1/agents/me/orders/manual", {
     method: "POST",
     headers: { Authorization: `Bearer ${token}` },
     body: JSON.stringify(payload),
