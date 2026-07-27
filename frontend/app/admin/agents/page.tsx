@@ -438,7 +438,7 @@ function AgentDashboardCard({ stats: s, onPayoutClick }: { stats: AgentStats; ad
         </div>
         <div className="bg-slate-800 rounded-xl py-2">
           <p className="text-[10px] text-slate-500 font-bold">للإرسال</p>
-          <p className="text-base font-black text-violet-400">0</p>
+          <p className="text-base font-black text-violet-400">{s.confirmed_queue}</p>
         </div>
         <div className="bg-slate-800 rounded-xl py-2">
           <p className="text-[10px] text-slate-500 font-bold">أُرسل</p>
