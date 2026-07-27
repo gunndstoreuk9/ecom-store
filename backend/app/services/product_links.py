@@ -24,7 +24,7 @@ from app.schemas.product_links import (
 from app.services.tracking_center import TrackingPinError, _verify_pin
 
 
-CONFIRMED_STATUSES = {"confirmed", "packed", "shipped", "delivered", "returned", "refused"}
+CONFIRMED_STATUSES = {"confirmed", "packed", "dispatched", "shipped", "delivered", "returned", "refused"}
 DELIVERED_STATUSES = {"delivered"}
 
 

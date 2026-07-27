@@ -34,7 +34,7 @@ from app.schemas.admin import (
 
 DELIVERED_STATUSES = {"delivered"}
 RETURNED_STATUSES = {"returned", "refused"}
-CONFIRMED_STATUSES = {"confirmed", "packed", "shipped", "delivered", "returned", "refused"}
+CONFIRMED_STATUSES = {"confirmed", "packed", "dispatched", "shipped", "delivered", "returned", "refused"}
 CANCELLED_STATUSES = {"cancelled", "no_answer"}
 
 
@@ -368,7 +368,7 @@ def dispatch_orders(
                 order.delivery_error = str(exc)
                 order.delivery_tracking = None
                 order.dispatched_at = None
-                if order.status == new_status or order.status == "shipped":
+                if order.status == new_status or order.status in ("dispatched", "shipped"):
                     order.status = "confirmed"
                 # keep failed dispatches out of shipped/payout queues; agents can review or retry.
         else:

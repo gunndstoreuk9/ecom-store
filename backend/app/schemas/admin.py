@@ -12,6 +12,7 @@ ORDER_STATUSES = {
     "awaiting_confirmation",
     "confirmed",
     "packed",
+    "dispatched",
     "no_answer",
     "cancelled",
     "shipped",
@@ -227,7 +228,7 @@ class AdminOrderCreate(BaseModel):
 class AdminDispatchRequest(BaseModel):
     order_ids: list[str] = Field(min_length=1)
     delivery_company: Optional[str] = Field(default=None, max_length=64)
-    status: str = Field(default="shipped")
+    status: str = Field(default="dispatched")
 
     @field_validator("status")
     @classmethod
