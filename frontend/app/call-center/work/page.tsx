@@ -41,7 +41,7 @@ const CALL_STATUSES = [
 const CALL_VALUE_TO_API: Record<string, string> = { annule: "cancelled" };
 
 type TabValue = "new" | "follow_up" | "confirmed" | "blacklist" | "all";
-type ProductFilter = "all" | "american-sugar-balance-complex" | "miracle-men-oil" | "HOYGI22-MAROC11";
+type ProductFilter = "all" | "american-sugar-balance-complex" | "miracle-men-oil" | "HOYGI22-MAROC11" | "NOVAMAN2026";
 
 const TABS: { value: TabValue; ar: string }[] = [
   { value: "new", ar: "طلبات جديدة" },
@@ -56,6 +56,7 @@ const PRODUCT_FILTERS: { value: ProductFilter; ar: string; shortAr: string }[] =
   { value: "american-sugar-balance-complex", ar: "المركّب الأمريكي لضبط السكر", shortAr: "ضبط السكر" },
   { value: "miracle-men-oil", ar: "الدهان الأمريكي المعجزة للرجال", shortAr: "دهان الرجال" },
   { value: "HOYGI22-MAROC11", ar: "سيرم علاج التجاعيد ببتيد النحاس الأزرق Hoygi", shortAr: "Hoygi سيرم" },
+  { value: "NOVAMAN2026", ar: "NOVA MAN USA OIL FOR STRONG MEN", shortAr: "NOVA MAN" },
 ];
 
 const PERIOD_AR: Record<string, string> = {
@@ -115,7 +116,7 @@ export default function AgentWorkspacePage() {
   const [payoutVersion, setPayoutVersion] = useState(0);
   const [orders, setOrders] = useState<AdminOrder[]>([]);
   const [counts, setCounts] = useState({ new: 0, follow_up: 0, confirmed: 0, blacklist: 0 });
-  const [productCounts, setProductCounts] = useState<Record<ProductFilter, number>>({ all: 0, "american-sugar-balance-complex": 0, "miracle-men-oil": 0, "HOYGI22-MAROC11": 0 });
+  const [productCounts, setProductCounts] = useState<Record<ProductFilter, number>>({ all: 0, "american-sugar-balance-complex": 0, "miracle-men-oil": 0, "HOYGI22-MAROC11": 0, "NOVAMAN2026": 0 });
   const [tab, setTab] = useState<TabValue>("new");
   const [productFilter, setProductFilter] = useState<ProductFilter>("all");
   const [query, setQuery] = useState("");

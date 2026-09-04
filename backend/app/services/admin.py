@@ -48,6 +48,7 @@ SUPPORTED_SHEET_IMPORT_SKUS = {
     "american-sugar-balance-complex",
     "miracle-men-oil",
     "HOYGI22-MAROC11",
+    "NOVAMAN2026",
 }
 
 
