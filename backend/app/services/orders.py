@@ -32,7 +32,7 @@ PRODUCTS = {
         "sheet_sku": "HOYGI22-MAROC11",
     },
     "NOVAMAN2026": {
-        "name_ar": "NOVAMAN USA OIL FOR STRONG MEN",
+        "name_ar": "Nova Man الأمريكي للرجال",
         "sheet_sku": "NOVAMAN2026",
     },
 }
