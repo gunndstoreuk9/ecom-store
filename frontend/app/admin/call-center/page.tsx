@@ -61,7 +61,7 @@ const PRODUCT_FILTERS: { value: ProductFilterValue; fr: string; ar: string; shor
   { value: "american-sugar-balance-complex", fr: "Blood Sugar Complex", ar: "المركّب الأمريكي لضبط السكر", shortAr: "ضبط السكر" },
   { value: "miracle-men-oil", fr: "Miracle Men Oil", ar: "الدهان الأمريكي المعجزة للرجال", shortAr: "دهان الرجال" },
   { value: "HOYGI22-MAROC11", fr: "Hoygi Serum", ar: "سيرم علاج التجاعيد ببتيد النحاس الأزرق Hoygi", shortAr: "Hoygi سيرم" },
-  { value: "NOVAMAN2026", fr: "NOVA MAN", ar: "NOVA MAN USA OIL FOR STRONG MEN", shortAr: "NOVA MAN" },
+  { value: "NOVAMAN2026", fr: "NOVA MAN", ar: "Nova Man الأمريكي للرجال", shortAr: "NOVA MAN" },
 ];
 
 export default function CallCenterPage() {
