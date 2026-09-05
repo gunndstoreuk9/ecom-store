@@ -28,7 +28,7 @@ const SUPPORTED_SKUS = [
   { value: "american-sugar-balance-complex", label: "المركّب الأمريكي لضبط السكر" },
   { value: "miracle-men-oil", label: "الدهان الأمريكي المعجزة للرجال" },
   { value: "HOYGI22-MAROC11", label: "سيرم علاج التجاعيد Hoygi" },
-  { value: "NOVAMAN2026", label: "NOVA MAN USA OIL FOR STRONG MEN" },
+  { value: "NOVAMAN2026", label: "Nova Man الأمريكي للرجال" },
 ];
 const AUTO_REFRESH_MS = 60_000;
 
